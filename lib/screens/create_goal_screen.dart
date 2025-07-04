@@ -273,14 +273,14 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
+                  child:                   TextFormField(
                     controller: _milestoneController,
                     decoration: const InputDecoration(
                       labelText: 'Add Milestone',
                       hintText: 'e.g., Complete first week',
                       border: OutlineInputBorder(),
                     ),
-                    onSubmitted: (_) => _addMilestone(),
+                    onFieldSubmitted: (_) => _addMilestone(),
                   ),
                 ),
                 const SizedBox(width: 8),
