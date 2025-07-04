@@ -295,6 +295,7 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
             width: 60,
             height: 60,
             child: Stack(
+              alignment: Alignment.center,
               children: [
                 CircularProgressIndicator(
                   value: widget.goal.progress,
@@ -309,7 +310,9 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
+                      height: 1.0,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],

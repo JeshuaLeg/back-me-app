@@ -58,15 +58,10 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
-              SliverAppBar(
-                expandedHeight: 100,
-                floating: false,
-                pinned: false,
-                backgroundColor: Colors.transparent,
-                flexibleSpace: Container(
-                  padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16, top: 40),
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 10),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ShaderMask(
@@ -80,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                         ),
                       ),
                       Text(
-                        'Stay accountable',
+                        'Stay accountable, reach your goals',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.primaryBlue.withOpacity(0.7),
                           fontWeight: FontWeight.w500,
