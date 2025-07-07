@@ -115,23 +115,59 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primaryBlue.withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: AppTheme.primaryBlue.withOpacity(0.6),
+                blurRadius: 25,
+                offset: const Offset(0, 12),
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+                spreadRadius: 1,
               ),
             ],
           ),
-          child: FloatingActionButton.extended(
-            onPressed: () => _navigateToCreateGoal(),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-            label: const Text(
-              'New Goal',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
+            ),
+            child: FloatingActionButton.extended(
+              onPressed: () => _navigateToCreateGoal(),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              highlightElevation: 0,
+              splashColor: Colors.white.withOpacity(0.2),
+              icon: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.add_rounded, 
+                  color: Colors.white, 
+                  size: 28,
+                ),
+              ),
+              label: const Text(
+                'New Goal',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black26,
+                      offset: Offset(1, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
