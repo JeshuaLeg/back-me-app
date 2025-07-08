@@ -115,11 +115,7 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
     if (widget.goal.status == GoalStatus.completed) {
       return AppTheme.successGradient;
     } else if (widget.goal.isOverdue) {
-      return const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFE53935), Color(0xFFEF5350)],
-      );
+      return AppTheme.errorGradient;
     } else {
       return AppTheme.primaryGradient;
     }
@@ -129,10 +125,8 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFE53935), Color(0xFFD32F2F)],
-        ),
+      decoration: BoxDecoration(
+        gradient: AppTheme.errorGradient,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),

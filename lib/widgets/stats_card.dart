@@ -120,11 +120,7 @@ class StatsCard extends StatelessWidget {
     } else if (color == Colors.orange) {
       return AppTheme.warningGradient;
     } else if (color == Colors.red) {
-      return const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFE53935), Color(0xFFEF5350)],
-      );
+      return AppTheme.errorGradient;
     } else {
       return AppTheme.primaryGradient;
     }
