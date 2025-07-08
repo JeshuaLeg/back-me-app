@@ -232,14 +232,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       valueColor: AlwaysStoppedAnimation<Color>(Colors.black54),
                                     ),
                                   )
-                                : Image.asset(
-                                    'assets/images/google_logo.png',
+                                : Container(
                                     width: 20,
                                     height: 20,
-                                    errorBuilder: (context, error, stackTrace) => Icon(
-                                      Icons.login_rounded,
-                                      size: 20,
-                                      color: Colors.black87,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'G',
+                                        style: TextStyle(
+                                          color: Colors.blue[600],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ),
                             label: Text(
