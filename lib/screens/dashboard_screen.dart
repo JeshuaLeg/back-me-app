@@ -4,9 +4,11 @@ import '../models/goal_service.dart';
 import '../models/reminder_service.dart';
 import '../widgets/goal_card.dart';
 import '../services/auth_service.dart';
+import '../services/achievement_service.dart';
 import '../main.dart';
 import 'create_goal_screen.dart';
 import 'goal_detail_screen.dart';
+import 'achievements_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,6 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   final GoalService _goalService = GoalService();
   final ReminderService _reminderService = ReminderService();
   final AuthService _authService = AuthService();
+  final AchievementService _achievementService = AchievementService();
   late AnimationController _fabAnimation;
   late AnimationController _headerAnimation;
   late Animation<double> _headerSlideAnimation;
@@ -58,6 +61,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     
     // Initialize reminder service with sample data
     _reminderService.initializeWithSampleData();
+    
+    // Initialize achievement service with goal data
+    _achievementService.initializeWithGoalData(_goalService.goals);
   }
 
   @override
@@ -116,83 +122,27 @@ class _DashboardScreenState extends State<DashboardScreen>
             stops: const [0.0, 0.3, 1.0],
           ),
         ),
-        child: SafeArea(
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildModernHeader(),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      _buildStatsSection(),
-                      const SizedBox(height: 32),
-                      _buildQuickActions(),
-                      const SizedBox(height: 32),
-                      _buildActiveGoalsSection(),
-                      const SizedBox(height: 32),
-                      _buildOverdueGoalsSection(),
-                      const SizedBox(height: 140), // Space for FAB + bottom nav
-                    ],
-                  ),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            _buildModernHeader(),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120), // Increased bottom spacing for nav clearance
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    _buildStatsSection(),
+                    const SizedBox(height: 32),
+                    _buildQuickActions(),
+                    const SizedBox(height: 32),
+                    _buildActiveGoalsSection(),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: ScaleTransition(
-        scale: _fabAnimation,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: AppTheme.darkAccentGradient,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.accentIndigo.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-                spreadRadius: 2,
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: FloatingActionButton.extended(
-            onPressed: () => _navigateToCreateGoal(),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            highlightElevation: 0,
-            splashColor: Colors.white.withOpacity(0.1),
-            icon: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.add_rounded, 
-                color: Colors.white, 
-                size: 24,
-              ),
             ),
-            label: const Text(
-              'New Goal',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -208,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: Opacity(
               opacity: _headerFadeAnimation.value,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 60, 24, 24), // Top padding for status bar
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -243,23 +193,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ],
                         ),
-                        // Profile avatar on the right
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            gradient: AppTheme.darkAccentGradient,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Colors.white.withOpacity(0.1),
-                            child: Text(
-                              _getUserInitials(),
-                              style: TextStyle(
-                                color: AppTheme.lightText,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                        // Achievement gem button on the right
+                        GestureDetector(
+                          onTap: () => _navigateToAchievements(),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.darkAccentGradient,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.accentIndigo.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.diamond_outlined,
+                              color: Colors.white,
+                              size: 24,
                             ),
                           ),
                         ),
@@ -346,7 +299,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${_goalService.activeGoals.length} active goals • ${_goalService.completedGoals.length} completed',
+                                  '${_goalService.activeGoals.length} active goals • ${_goalService.completedGoals.length} done',
                                   style: TextStyle(
                                     color: AppTheme.mutedText,
                                     fontSize: 12,
@@ -497,7 +450,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: _buildCompactStatsCard(
-                  'Completed',
+                  'Done',
                   completedGoals.length.toString(),
                   Icons.check_circle_rounded,
                   AppTheme.successGreen,
@@ -919,35 +872,17 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: 20),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: activeGoals.length > 2 ? 2 : activeGoals.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final goal = activeGoals[index];
-              return TweenAnimationBuilder<double>(
-                duration: Duration(milliseconds: 600 + (index * 100)),
-                tween: Tween(begin: 0.0, end: 1.0),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 20 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: GoalCard(
-                        goal: goal,
-                        onTap: () => _navigateToGoalDetail(goal),
-                        onProgressUpdate: (progress) => _updateGoalProgress(goal.id, progress),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+          // Goal cards without complex animations
+          ...activeGoals.take(2).map((goal) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: GoalCard(
+              goal: goal,
+              onTap: () => _navigateToGoalDetail(goal),
+              onProgressUpdate: (progress) => _updateGoalProgress(goal.id, progress),
+            ),
+          )).toList(),
           if (activeGoals.length > 2) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 4), // Reduced spacing
             Center(
               child: Material(
                 color: Colors.transparent,
@@ -993,59 +928,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildOverdueGoalsSection() {
-    final overdueGoals = _goalService.overdueGoals;
-
-    if (overdueGoals.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppTheme.errorGradient,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.warning_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Overdue Goals',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.errorRose,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: overdueGoals.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
-          itemBuilder: (context, index) {
-            final goal = overdueGoals[index];
-            return GoalCard(
-              goal: goal,
-              onTap: () => _navigateToGoalDetail(goal),
-              onProgressUpdate: (progress) => _updateGoalProgress(goal.id, progress),
-              showOverdueBadge: true,
-            );
-          },
-        ),
-      ],
-    );
-  }
 
   Widget _buildEmptyState() {
     return Container(
@@ -1284,9 +1166,19 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  void _navigateToAchievements() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AchievementsScreen(),
+      ),
+    );
+  }
+
   void _updateGoalProgress(String goalId, double progress) {
     setState(() {
       _goalService.updateProgress(goalId, progress);
+      // Update achievement service with new goal data
+      _achievementService.initializeWithGoalData(_goalService.goals);
     });
   }
 

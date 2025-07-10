@@ -86,16 +86,16 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
                       if (widget.showOverdueBadge || widget.goal.isOverdue) 
                         _buildOverdueBanner(context),
                       Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeader(context),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             _buildDescription(context),
-                            const SizedBox(height: 20),
-                            _buildProgressSection(context),
                             const SizedBox(height: 16),
+                            _buildProgressSection(context),
+                            const SizedBox(height: 12),
                             _buildFooter(context),
                           ],
                         ),
@@ -117,7 +117,84 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
     } else if (widget.goal.isOverdue) {
       return AppTheme.errorGradient;
     } else {
-      return AppTheme.primaryGradient;
+      // Different colors based on goal category
+      switch (widget.goal.category) {
+        case GoalCategory.fitness:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF00A693), // Darker teal
+              Color(0xFF008075), // Even darker teal
+            ],
+          );
+        case GoalCategory.career:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF5A67D8), // Darker blue
+              Color(0xFF553C9A), // Darker purple
+            ],
+          );
+        case GoalCategory.education:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFE53E3E), // Darker coral/red
+              Color(0xFFDD6B20), // Darker orange
+            ],
+          );
+        case GoalCategory.health:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF38A169), // Darker green
+              Color(0xFF3182CE), // Darker blue
+            ],
+          );
+        case GoalCategory.habits:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFD53F8C), // Darker pink
+              Color(0xFFDD6B20), // Darker orange
+            ],
+          );
+        case GoalCategory.finance:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF059669), // Darker emerald green
+              Color(0xFF0891B2), // Darker cyan
+            ],
+          );
+        case GoalCategory.relationships:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFE53E3E), // Darker red
+              Color(0xFFDD6B20), // Darker orange
+            ],
+          );
+        case GoalCategory.other:
+          return LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF718096), // Darker gray
+              Color(0xFF4A5568), // Even darker gray
+            ],
+          );
+        case GoalCategory.personal:
+        default:
+          return AppTheme.primaryGradient;
+      }
     }
   }
 
@@ -165,10 +242,10 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: Colors.white.withOpacity(0.3),
               width: 1.5,
@@ -177,10 +254,10 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
           child: Icon(
             widget.goal.categoryIcon,
             color: Colors.white,
-            size: 24,
+            size: 20,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,10 +299,10 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
 
   Widget _buildStakeBadge(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         gradient: AppTheme.warningGradient,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: Colors.white.withOpacity(0.3),
           width: 1,
@@ -233,8 +310,8 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
         boxShadow: [
           BoxShadow(
             color: Colors.orange.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -244,14 +321,14 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
           const Icon(
             Icons.attach_money_rounded,
             color: Colors.white,
-            size: 16,
+            size: 14,
           ),
           Text(
             '${widget.goal.stakeAmount.toStringAsFixed(0)}',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 12,
             ),
           ),
         ],
@@ -264,7 +341,8 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
       widget.goal.description,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
         color: Colors.white.withOpacity(0.8),
-        height: 1.4,
+        height: 1.3,
+        fontSize: 13,
       ),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
@@ -276,73 +354,75 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.white.withOpacity(0.2),
           width: 1,
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Circular progress indicator
-          SizedBox(
-            width: 60,
-            height: 60,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: widget.goal.progress,
-                  backgroundColor: Colors.white.withOpacity(0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 6,
+          // Header row with progress text and days remaining
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progress',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
-                Center(
-                  child: Text(
-                    '${(widget.goal.progress * 100).toStringAsFixed(0)}%',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      height: 1.0,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+              ),
+              Text(
+                '${widget.goal.daysRemaining} days left',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withOpacity(0.7),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 12),
+          
+          // Progress indicator and slider row
+          Row(
+            children: [
+              // Circular progress indicator
+              Container(
+                width: 48,
+                height: 48,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(
-                      'Progress',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w600,
-                      ),
+                    CircularProgressIndicator(
+                      value: widget.goal.progress,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 4,
                     ),
                     Text(
-                      '${widget.goal.daysRemaining} days left',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withOpacity(0.7),
-                        fontWeight: FontWeight.w500,
+                      '${(widget.goal.progress * 100).toStringAsFixed(0)}%',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                if (widget.onProgressUpdate != null) ...[
-                  SliderTheme(
+              ),
+              const SizedBox(width: 16),
+              
+              // Progress slider
+              if (widget.onProgressUpdate != null) 
+                Expanded(
+                  child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       trackHeight: 6,
                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
                       activeTrackColor: Colors.white,
                       inactiveTrackColor: Colors.white.withOpacity(0.3),
                       thumbColor: Colors.white,
@@ -351,13 +431,32 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
                     child: Slider(
                       value: widget.goal.progress,
                       onChanged: widget.onProgressUpdate,
-                      divisions: 10,
+                      divisions: 20,
                       label: '${(widget.goal.progress * 100).round()}%',
                     ),
                   ),
-                ],
-              ],
-            ),
+                )
+              else
+                Expanded(
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: widget.goal.progress,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(3),
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -368,17 +467,17 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.schedule_rounded,
-                size: 14,
+                size: 12,
                 color: Colors.white.withOpacity(0.8),
               ),
               const SizedBox(width: 4),
@@ -389,7 +488,7 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.white.withOpacity(0.8),
                   fontWeight: FontWeight.w500,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ],
@@ -398,17 +497,17 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
         const Spacer(),
         if (widget.goal.accountabilityPartners.isNotEmpty) ...[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.people_rounded,
-                  size: 14,
+                  size: 12,
                   color: Colors.white.withOpacity(0.8),
                 ),
                 const SizedBox(width: 4),
@@ -417,7 +516,7 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.white.withOpacity(0.8),
                     fontWeight: FontWeight.w500,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ],

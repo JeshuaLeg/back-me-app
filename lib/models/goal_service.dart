@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'goal.dart';
+import '../services/achievement_service.dart';
 
 class GoalService extends ChangeNotifier {
   static final GoalService _instance = GoalService._internal();
@@ -31,6 +32,7 @@ class GoalService extends ChangeNotifier {
     final index = _goals.indexWhere((goal) => goal.id == updatedGoal.id);
     if (index != -1) {
       _goals[index] = updatedGoal;
+      _updateAchievements();
       notifyListeners();
     }
   }
@@ -78,6 +80,15 @@ class GoalService extends ChangeNotifier {
         isStakeReleased: true,
       ));
     }
+  }
+
+  void _updateAchievements() {
+    final completedGoals = this.completedGoals.length;
+    final totalGoals = _goals.length;
+    final totalStakes = totalStakesAtRisk;
+    
+    // Update achievement service with current goal stats
+    AchievementService().updateGoalStats(completedGoals, totalGoals, totalStakes);
   }
 
   void _initializeSampleData() {

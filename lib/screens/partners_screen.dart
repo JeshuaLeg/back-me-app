@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../main.dart';
 
 class PartnersScreen extends StatelessWidget {
   const PartnersScreen({super.key});
@@ -6,8 +7,11 @@ class PartnersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Accountability Partners'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: () => _showAddPartnerDialog(context),
@@ -15,38 +19,69 @@ class PartnersScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.people_outline,
-              size: 80,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0F172A),
+              AppTheme.primarySlate.withOpacity(0.05),
+              const Color(0xFF0F172A),
+            ],
+            stops: const [0.0, 0.3, 1.0],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120), // Increased bottom spacing for nav clearance
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people_outline_rounded,
+                  size: 80,
+                  color: AppTheme.mutedText,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'No Partners Yet',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.lightText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Add accountability partners to help you stay on track with your goals.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.mutedText,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddPartnerDialog(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentIndigo,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Add Partner'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No Partners Yet',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add friends and family to help you stay accountable to your goals.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => _showAddPartnerDialog(context),
-              icon: const Icon(Icons.person_add),
-              label: const Text('Add Partner'),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,213 +1,577 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../models/goal_service.dart';
+import '../main.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final AuthService _authService = AuthService();
+  final GoalService _goalService = GoalService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            onPressed: () => _showSettings(context),
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildProfileHeader(context),
-          const SizedBox(height: 24),
-          _buildStatsSection(context),
-          const SizedBox(height: 24),
-          _buildSettingsSection(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Text(
-                'JD',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'John Doe',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              'john.doe@example.com',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _editProfile(context),
-              child: const Text('Edit Profile'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your Achievements',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(context, 'Goals Completed', '5', Icons.check_circle, Colors.green),
-                ),
-                Expanded(
-                  child: _buildStatItem(context, 'Total Stakes', '\$450', Icons.attach_money, Colors.orange),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(context, 'Success Rate', '83%', Icons.trending_up, Colors.blue),
-                ),
-                Expanded(
-                  child: _buildStatItem(context, 'Streak', '12 days', Icons.local_fire_department, Colors.red),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(BuildContext context, String title, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 32),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: color,
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0F172A),
+              AppTheme.primarySlate.withOpacity(0.05),
+              const Color(0xFF0F172A),
+            ],
+            stops: const [0.0, 0.3, 1.0],
           ),
         ),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 120), // Increased bottom spacing for nav clearance
+          child: Column(
+            children: [
+              _buildProfileHeader(),
+              const SizedBox(height: 24),
+              _buildStatsSection(),
+              const SizedBox(height: 24),
+              _buildSettingsSection(),
+              const SizedBox(height: 32),
+              _buildLogoutButton(),
+            ],
           ),
-          textAlign: TextAlign.center,
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildSettingsSection(BuildContext context) {
-    return Card(
+  Widget _buildProfileHeader() {
+    final userInitials = _getUserInitials();
+    final userName = _authService.userDisplayName;
+    final userEmail = _authService.userEmail;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.darkCard.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.accentIndigo.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
       child: Column(
         children: [
-          ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('Notifications'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showNotificationSettings(context),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: AppTheme.darkAccentGradient,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.accentIndigo.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Text(
+              userInitials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip),
-            title: const Text('Privacy'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showPrivacySettings(context),
+          const SizedBox(height: 20),
+          Text(
+            userName,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.lightText,
+            ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.help),
-            title: const Text('Help & Support'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showHelp(context),
+          const SizedBox(height: 8),
+          Text(
+            userEmail,
+            style: TextStyle(
+              fontSize: 16,
+              color: AppTheme.mutedText,
+            ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('About'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showAbout(context),
+          if (!_authService.isEmailVerified) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.warningAmber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.warningAmber.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.warning_rounded,
+                    color: AppTheme.warningAmber,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Email not verified',
+                    style: TextStyle(
+                      color: AppTheme.warningAmber,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsSection() {
+    final completedGoals = _goalService.completedGoals;
+    final totalGoals = _goalService.goals;
+    final totalStakes = _goalService.totalStakesAtRisk;
+    final successRate = totalGoals.isNotEmpty 
+        ? (completedGoals.length / totalGoals.length * 100).round()
+        : 0;
+    final currentStreak = _calculateCurrentStreak();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.darkCard.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.successGreen.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.darkSuccessGradient,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.successGreen.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.emoji_events_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                'Your Achievements',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.lightText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  'Goals Completed',
+                  completedGoals.length.toString(),
+                  Icons.check_circle_rounded,
+                  AppTheme.successGreen,
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  'Total Stakes',
+                  '\$${totalStakes.toStringAsFixed(0)}',
+                  Icons.attach_money_rounded,
+                  AppTheme.warningAmber,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  'Success Rate',
+                  '$successRate%',
+                  Icons.trending_up_rounded,
+                  AppTheme.accentIndigo,
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  'Current Streak',
+                  '$currentStreak days',
+                  Icons.local_fire_department_rounded,
+                  AppTheme.errorRose,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _editProfile(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit profile feature coming soon!')),
+  Widget _buildStatItem(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.mutedText,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
-  void _showSettings(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings feature coming soon!')),
+  Widget _buildSettingsSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.darkCard.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.mutedText.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildSettingsItem(
+            Icons.notifications_rounded,
+            'Notifications',
+            'Manage your reminders and alerts',
+            onTap: () => _showNotificationSettings(),
+          ),
+          _buildDivider(),
+          _buildSettingsItem(
+            Icons.privacy_tip_rounded,
+            'Privacy',
+            'Manage your privacy settings',
+            onTap: () => _showPrivacySettings(),
+          ),
+          _buildDivider(),
+          _buildSettingsItem(
+            Icons.help_outline_rounded,
+            'Help & Support',
+            'Get help and contact support',
+            onTap: () => _showHelp(),
+          ),
+          _buildDivider(),
+          _buildSettingsItem(
+            Icons.info_outline_rounded,
+            'About',
+            'App version and information',
+            onTap: () => _showAbout(),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showNotificationSettings(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Notification settings coming soon!')),
+  Widget _buildSettingsItem(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(0),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.mutedText.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppTheme.mutedText,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.lightText,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  void _showPrivacySettings(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Privacy settings coming soon!')),
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 1,
+      color: AppTheme.mutedText.withOpacity(0.1),
     );
   }
 
-  void _showHelp(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Help & support coming soon!')),
+  Widget _buildLogoutButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: AppTheme.errorGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.errorRose.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _showLogoutConfirmation,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.logout_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Log Out',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  void _showAbout(BuildContext context) {
-    showAboutDialog(
+  String _getUserInitials() {
+    final name = _authService.userDisplayName;
+    if (name.isEmpty) return 'U';
+    
+    final words = name.split(' ');
+    if (words.length == 1) {
+      return words[0][0].toUpperCase();
+    } else {
+      return '${words[0][0]}${words[1][0]}'.toUpperCase();
+    }
+  }
+
+  int _calculateCurrentStreak() {
+    final completedGoals = _goalService.completedGoals;
+    if (completedGoals.isEmpty) return 0;
+    
+    // Simple streak calculation based on recent completed goals
+    // In a real app, you'd track daily activity
+    final now = DateTime.now();
+    int streak = 0;
+    
+    for (final goal in completedGoals.reversed) {
+      final daysSinceCompleted = now.difference(goal.createdAt).inDays;
+      if (daysSinceCompleted <= 7) {
+        streak += 5; // Each completed goal adds 5 days to streak
+      }
+    }
+    
+    return streak;
+  }
+
+  void _showLogoutConfirmation() {
+    showDialog(
       context: context,
-      applicationName: 'Back Me',
-      applicationVersion: '1.0.0',
-      applicationLegalese: '© 2024 Back Me. All rights reserved.',
-      children: [
-        const Text('Stay accountable, reach your goals with the help of friends and family.'),
-      ],
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Log Out',
+          style: TextStyle(
+            color: AppTheme.lightText,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to log out?',
+          style: TextStyle(
+            color: AppTheme.mutedText,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _performLogout();
+            },
+            child: Text(
+              'Log Out',
+              style: TextStyle(
+                color: AppTheme.errorRose,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performLogout() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to log out: $e'),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showNotificationSettings() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Notification settings coming soon!'),
+        backgroundColor: AppTheme.accentIndigo,
+      ),
+    );
+  }
+
+  void _showPrivacySettings() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Privacy settings coming soon!'),
+        backgroundColor: AppTheme.accentIndigo,
+      ),
+    );
+  }
+
+  void _showHelp() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Help & support coming soon!'),
+        backgroundColor: AppTheme.accentIndigo,
+      ),
+    );
+  }
+
+  void _showAbout() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('About section coming soon!'),
+        backgroundColor: AppTheme.accentIndigo,
+      ),
     );
   }
 } 
