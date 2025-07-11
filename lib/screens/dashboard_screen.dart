@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/goal.dart';
-import '../models/goal_service.dart';
+import '../models/firebase_goal.dart';
+import '../services/firebase_goal_service.dart';
 import '../models/reminder_service.dart';
 import '../widgets/goal_card.dart';
 import '../services/auth_service.dart';
@@ -9,9 +9,12 @@ import '../main.dart';
 import 'create_goal_screen.dart';
 import 'goal_detail_screen.dart';
 import 'achievements_screen.dart';
+import 'reminders_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final Function(int)? onTabSwitch;
+  
+  const DashboardScreen({super.key, this.onTabSwitch});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -19,7 +22,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
-  final GoalService _goalService = GoalService();
+  final FirebaseGoalService _goalService = FirebaseGoalService();
   final ReminderService _reminderService = ReminderService();
   final AuthService _authService = AuthService();
   final AchievementService _achievementService = AchievementService();
@@ -27,6 +30,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   late AnimationController _headerAnimation;
   late Animation<double> _headerSlideAnimation;
   late Animation<double> _headerFadeAnimation;
+  
+  // State for expanding/collapsing active goals
+  bool _areGoalsExpanded = false;
+  List<FirebaseGoal> _currentGoals = [];
 
   @override
   void initState() {
@@ -59,11 +66,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     _fabAnimation.forward();
     _headerAnimation.forward();
     
+    // Initialize Firebase goal service
+    _goalService.initialize();
+    
     // Initialize reminder service with sample data
     _reminderService.initializeWithSampleData();
     
-    // Initialize achievement service with goal data
-    _achievementService.initializeWithGoalData(_goalService.goals);
+    // Listen to goals stream to update achievement service
+    _goalService.goalsStream.listen((goals) {
+      _currentGoals = goals;
+      // Update achievement service to work with FirebaseGoal
+      _achievementService.initializeWithGoalData(goals);
+    });
   }
 
   @override
@@ -73,6 +87,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
+  // Helper method to convert FirebaseGoals to old Goal format for AchievementService
+  // TODO: Update AchievementService to use FirebaseGoal directly
+  List<dynamic> _convertToOldGoals(List<FirebaseGoal> firebaseGoals) {
+    // For now, return empty list to avoid errors
+    // The AchievementService should be updated to work with FirebaseGoal
+    return [];
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -80,9 +102,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     return 'Good evening';
   }
 
-  String _getMotivationalMessage() {
-    final activeGoals = _goalService.activeGoals.length;
-    final completedGoals = _goalService.completedGoals.length;
+  String _getMotivationalMessage(List<FirebaseGoal> goals) {
+    final activeGoals = goals.where((goal) => goal.status == GoalStatus.active).length;
+    final completedGoals = goals.where((goal) => goal.status == GoalStatus.completed).length;
     
     if (activeGoals == 0) {
       return "Ready to start your journey?";
@@ -116,39 +138,56 @@ class _DashboardScreenState extends State<DashboardScreen>
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.3, 1.0],
           ),
         ),
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            _buildModernHeader(),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120), // Increased bottom spacing for nav clearance
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    _buildStatsSection(),
-                    const SizedBox(height: 32),
-                    _buildQuickActions(),
-                    const SizedBox(height: 32),
-                    _buildActiveGoalsSection(),
-                  ],
+        child: StreamBuilder<List<FirebaseGoal>>(
+          stream: _goalService.goalsStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('Error loading goals: ${snapshot.error}'),
+              );
+            }
+
+            final goals = snapshot.data ?? [];
+
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                _buildModernHeader(goals),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 120), // Increased bottom spacing for nav clearance
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        _buildStatsSection(goals),
+                        const SizedBox(height: 32),
+                        _buildQuickActions(),
+                        const SizedBox(height: 32),
+                        _buildActiveGoalsSection(goals),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildModernHeader() {
+  Widget _buildModernHeader(List<FirebaseGoal> goals) {
     return SliverToBoxAdapter(
       child: AnimatedBuilder(
         animation: _headerAnimation,
@@ -172,7 +211,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppTheme.accentIndigo.withOpacity(0.1),
+                                color: AppTheme.accentIndigo.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
@@ -193,9 +232,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ],
                         ),
-                        // Achievement gem button on the right
+                        // User avatar on the right
                         GestureDetector(
-                          onTap: () => _navigateToAchievements(),
+                          onTap: () {
+                            if (widget.onTabSwitch != null) {
+                              widget.onTabSwitch!(3); // Navigate to profile tab
+                            }
+                          },
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -203,14 +246,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.accentIndigo.withOpacity(0.3),
-                                  blurRadius: 8,
+                                  color: AppTheme.accentIndigo.withValues(alpha: 0.3),
+                                  blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: Icon(
-                              Icons.diamond_outlined,
+                              Icons.person_rounded,
                               color: Colors.white,
                               size: 24,
                             ),
@@ -218,114 +261,144 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
                     
-                    // Greeting and motivation
-                    Text(
-                      _getGreeting(),
-                      style: TextStyle(
-                        color: AppTheme.mutedText,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 32),
                     
-                    ShaderMask(
-                      shaderCallback: (bounds) => AppTheme.darkAccentGradient.createShader(bounds),
-                      child: Text(
-                        _authService.userDisplayName,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    Text(
-                      _getMotivationalMessage(),
-                      style: TextStyle(
-                        color: AppTheme.mutedText,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Progress indicator
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.darkCard.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppTheme.accentIndigo.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              gradient: AppTheme.darkAccentGradient,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.trending_up_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
+                    // Greeting and motivational message
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 800),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Weekly Progress',
+                                  '${_getGreeting()}, ${_authService.userDisplayName}',
                                   style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
                                     color: AppTheme.lightText,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                                    letterSpacing: -0.8,
+                                    height: 1.1,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
-                                  '${_goalService.activeGoals.length} active goals • ${_goalService.completedGoals.length} done',
+                                  _getMotivationalMessage(goals),
                                   style: TextStyle(
+                                    fontSize: 16,
                                     color: AppTheme.mutedText,
-                                    fontSize: 12,
                                     fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.2,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.successGreen.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '🔥 ${(_goalService.completedGoals.length * 2.5).toInt()}%',
-                              style: TextStyle(
-                                color: AppTheme.successGreen,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Weekly overview card
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1000),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+                      builder: (context, value, child) {
+                        final activeGoals = goals.where((goal) => goal.status == GoalStatus.active).length;
+                        final completedGoals = goals.where((goal) => goal.status == GoalStatus.completed).length;
+
+                        return Transform.translate(
+                          offset: Offset(0, 30 * (1 - value)),
+                          child: Opacity(
+                            opacity: value,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.darkAccentGradient,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.accentIndigo.withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(
+                                      Icons.trending_up_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Weekly Progress',
+                                          style: TextStyle(
+                                            color: AppTheme.lightText,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$activeGoals active goals • $completedGoals done',
+                                          style: TextStyle(
+                                            color: AppTheme.mutedText,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      '🔥 ${(completedGoals * 2.5).toInt()}%',
+                                      style: TextStyle(
+                                        color: AppTheme.successGreen,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -337,19 +410,19 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildStatsSection() {
-    final activeGoals = _goalService.activeGoals;
-    final overdueGoals = _goalService.overdueGoals;
-    final completedGoals = _goalService.completedGoals;
-    final totalStakes = _goalService.totalStakesAtRisk;
+  Widget _buildStatsSection(List<FirebaseGoal> goals) {
+    final activeGoals = goals.where((goal) => goal.status == GoalStatus.active).toList();
+    final overdueGoals = goals.where((goal) => goal.isOverdue).toList();
+    final completedGoals = goals.where((goal) => goal.status == GoalStatus.completed).toList();
+    final totalStakes = activeGoals.fold(0.0, (sum, goal) => sum + goal.stakeAmount);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withOpacity(0.3),
+        color: AppTheme.darkCard.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.accentIndigo.withOpacity(0.1),
+          color: AppTheme.accentIndigo.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -363,13 +436,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       gradient: AppTheme.darkAccentGradient,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.accentIndigo.withOpacity(0.3),
+                          color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -378,7 +451,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: const Icon(
                       Icons.analytics_rounded,
                       color: Colors.white,
-                      size: 20,
+                      size: 18,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -386,7 +459,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Your Performance',
+                        'Goal Overview',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -395,7 +468,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ),
                       Text(
-                        'Last 7 days',
+                        'Track your progress',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.mutedText,
@@ -409,16 +482,20 @@ class _DashboardScreenState extends State<DashboardScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppTheme.successGreen.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppTheme.successGreen.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.successGreen.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.trending_up_rounded,
-                      size: 14,
                       color: AppTheme.successGreen,
+                      size: 14,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -434,9 +511,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ],
           ),
+          
           const SizedBox(height: 24),
           
-          // Main stats in single row for better use of space
+          // Stats row
           Row(
             children: [
               Expanded(
@@ -483,7 +561,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.darkSurface.withOpacity(0.4),
+              color: AppTheme.darkSurface.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -500,7 +578,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                     Text(
-                      '${(completedGoals.length / (activeGoals.length + completedGoals.length) * 100).toInt()}%',
+                      '${goals.isNotEmpty ? (completedGoals.length / goals.length * 100).toInt() : 0}%',
                       style: TextStyle(
                         color: AppTheme.successGreen,
                         fontWeight: FontWeight.bold,
@@ -513,8 +591,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: (completedGoals.length / (activeGoals.length + completedGoals.length + 1)),
-                    backgroundColor: AppTheme.mutedText.withOpacity(0.2),
+                    value: goals.isNotEmpty ? (completedGoals.length / goals.length) : 0.0,
+                    backgroundColor: AppTheme.mutedText.withValues(alpha: 0.2),
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.successGreen),
                     minHeight: 6,
                   ),
@@ -529,41 +607,46 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildCompactStatsCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 20,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 16,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              color: AppTheme.lightText,
-              fontWeight: FontWeight.bold,
               fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.lightText,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             title,
             style: TextStyle(
+              fontSize: 11,
               color: AppTheme.mutedText,
-              fontSize: 10,
               fontWeight: FontWeight.w500,
-              letterSpacing: 0.5,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -587,7 +670,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.accentIndigo.withOpacity(0.3),
+                        color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -610,21 +693,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
               ],
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.accentIndigo.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '2',
-                style: TextStyle(
-                  color: AppTheme.accentIndigo,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
             ),
           ],
         ),
@@ -665,7 +733,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 subtitle: 'Stay on track',
                 icon: Icons.notifications_active_rounded,
                 gradient: AppTheme.warningGradient,
-                onTap: () => _showRemindersDialog(),
+                onTap: () => _navigateToReminders(),
               ),
             ),
             const SizedBox(width: 16),
@@ -691,92 +759,81 @@ class _DashboardScreenState extends State<DashboardScreen>
     required LinearGradient gradient,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.darkCard.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppTheme.accentIndigo.withOpacity(0.15),
-                width: 1,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: gradient.begin,
-                      end: gradient.end,
-                      colors: gradient.colors.map((color) => color.withOpacity(0.8)).toList(),
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: AppTheme.lightText,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    letterSpacing: -0.2,
-                  ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 20,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildActiveGoalsSection() {
-    final activeGoals = _goalService.activeGoals;
+  Widget _buildActiveGoalsSection(List<FirebaseGoal> allGoals) {
+    final activeGoals = allGoals.where((goal) => goal.status == GoalStatus.active).toList();
 
     if (activeGoals.isEmpty) {
       return _buildEmptyState();
     }
 
+    // Determine how many goals to show
+    final goalsToShow = _areGoalsExpanded ? activeGoals : activeGoals.take(2).toList();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withOpacity(0.2),
+        color: AppTheme.darkCard.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.successGreen.withOpacity(0.1),
+          color: AppTheme.successGreen.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -795,7 +852,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.successGreen.withOpacity(0.3),
+                          color: AppTheme.successGreen.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -840,10 +897,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.successGreen.withOpacity(0.15),
+                      color: AppTheme.successGreen.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppTheme.successGreen.withOpacity(0.3),
+                        color: AppTheme.successGreen.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -872,30 +929,50 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: 20),
-          // Goal cards without complex animations
-          ...activeGoals.take(2).map((goal) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GoalCard(
-              goal: goal,
-              onTap: () => _navigateToGoalDetail(goal),
-              onProgressUpdate: (progress) => _updateGoalProgress(goal.id, progress),
+          
+          // Goal cards with smooth expand/collapse animation
+          AnimatedSize(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOutCubic,
+            child: Column(
+              children: [
+                ...goalsToShow.map((goal) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GoalCard(
+                    goal: goal,
+                    onTap: () => _navigateToGoalDetail(goal),
+                    onProgressUpdate: (progress) => _updateGoalProgress(goal.id, progress),
+                  ),
+                )),
+              ],
             ),
-          )).toList(),
+          ),
+          
+          // Show expand/collapse button only if there are more than 2 goals
           if (activeGoals.length > 2) ...[
-            const SizedBox(height: 4), // Reduced spacing
+            const SizedBox(height: 8),
             Center(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _navigateToGoals(),
+                  onTap: () {
+                    setState(() {
+                      _areGoalsExpanded = !_areGoalsExpanded;
+                    });
+                  },
                   borderRadius: BorderRadius.circular(12),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppTheme.darkSurface.withOpacity(0.6),
+                      color: _areGoalsExpanded 
+                          ? AppTheme.successGreen.withValues(alpha: 0.1)
+                          : AppTheme.darkSurface.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppTheme.mutedText.withOpacity(0.2),
+                        color: _areGoalsExpanded
+                            ? AppTheme.successGreen.withValues(alpha: 0.3)
+                            : AppTheme.mutedText.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -903,18 +980,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '+${activeGoals.length - 2} more goals',
+                          _areGoalsExpanded 
+                              ? 'Show less' 
+                              : '+${activeGoals.length - 2} more goals',
                           style: TextStyle(
-                            color: AppTheme.mutedText,
+                            color: _areGoalsExpanded 
+                                ? AppTheme.successGreen
+                                : AppTheme.mutedText,
                             fontWeight: FontWeight.w500,
                             fontSize: 12,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: AppTheme.mutedText,
-                          size: 16,
+                        AnimatedRotation(
+                          duration: const Duration(milliseconds: 200),
+                          turns: _areGoalsExpanded ? 0.5 : 0.0,
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: _areGoalsExpanded 
+                                ? AppTheme.successGreen
+                                : AppTheme.mutedText,
+                            size: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -928,15 +1015,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-
   Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withOpacity(0.3),
+        color: AppTheme.darkCard.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: AppTheme.accentIndigo.withOpacity(0.15),
+          color: AppTheme.accentIndigo.withValues(alpha: 0.15),
           width: 1,
         ),
       ),
@@ -956,7 +1042,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.accentIndigo.withOpacity(0.3),
+                        color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -1024,7 +1110,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.accentIndigo.withOpacity(0.4),
+                        color: AppTheme.accentIndigo.withValues(alpha: 0.4),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -1043,7 +1129,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
@@ -1088,7 +1174,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  void _navigateToGoalDetail(Goal goal) {
+  void _navigateToGoalDetail(FirebaseGoal goal) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => GoalDetailScreen(goal: goal),
@@ -1101,67 +1187,24 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _navigateToGoals() {
-    // Switch to goals tab in the parent HomeScreen
-    // Since we're using a BottomNavigationBar, we need to communicate with parent
-    // For now, we'll show a message to use the navigation bar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              Icons.info_outline_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Use the Goals tab in the bottom navigation',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppTheme.accentIndigo,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // Switch to Goals tab (index 1) using parent HomeScreen callback
+    if (widget.onTabSwitch != null) {
+      widget.onTabSwitch!(1);
+    }
   }
 
   void _navigateToPartners() {
-    // Switch to partners tab in the parent HomeScreen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              Icons.info_outline_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Use the Partners tab in the bottom navigation',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppTheme.accentIndigo,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
+    // Switch to Partners tab (index 2) using parent HomeScreen callback
+    if (widget.onTabSwitch != null) {
+      widget.onTabSwitch!(2);
+    }
+  }
+
+  void _navigateToReminders() {
+    // Navigate to dedicated RemindersScreen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const RemindersScreen(),
       ),
     );
   }
@@ -1174,345 +1217,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  void _updateGoalProgress(String goalId, double progress) {
-    setState(() {
-      _goalService.updateProgress(goalId, progress);
-      // Update achievement service with new goal data
-      _achievementService.initializeWithGoalData(_goalService.goals);
-    });
-  }
-
-  void _showRemindersDialog() {
-    final upcomingReminders = _reminderService.upcomingReminders;
-    final stats = _reminderService.stats;
-    
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxHeight: 600),
-          decoration: BoxDecoration(
-            color: AppTheme.darkCard,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: AppTheme.accentIndigo.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.darkAccentGradient,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.notifications_active_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Your Reminders',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '${stats.active} active • ${stats.today} today',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Stats Section
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.darkSurface.withOpacity(0.3),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildReminderStat(
-                        'Today',
-                        stats.today.toString(),
-                        Icons.today_rounded,
-                        AppTheme.accentIndigo,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: AppTheme.mutedText.withOpacity(0.2),
-                    ),
-                    Expanded(
-                      child: _buildReminderStat(
-                        'Active',
-                        stats.active.toString(),
-                        Icons.check_circle_rounded,
-                        AppTheme.successGreen,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: AppTheme.mutedText.withOpacity(0.2),
-                    ),
-                    Expanded(
-                      child: _buildReminderStat(
-                        'Overdue',
-                        stats.overdue.toString(),
-                        Icons.warning_rounded,
-                        AppTheme.warningAmber,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Content
-              Flexible(
-                child: upcomingReminders.isEmpty
-                    ? _buildNoRemindersState()
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: upcomingReminders.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final schedule = upcomingReminders[index];
-                          return _buildReminderScheduleCard(schedule);
-                        },
-                      ),
-              ),
-              
-              // Footer
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.darkSurface.withOpacity(0.3),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      // Navigate to reminder management screen (future feature)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Reminder management coming soon!'),
-                          backgroundColor: AppTheme.accentIndigo,
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentIndigo,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: Icon(Icons.settings_rounded, size: 18),
-                    label: Text('Manage Reminders'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReminderStat(String label, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            color: AppTheme.lightText,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppTheme.mutedText,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNoRemindersState() {
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.accentIndigo.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              Icons.schedule_rounded,
-              size: 48,
-              color: AppTheme.accentIndigo,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'No Upcoming Reminders',
-            style: TextStyle(
-              color: AppTheme.lightText,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create a goal to set up reminders',
-            style: TextStyle(
-              color: AppTheme.mutedText,
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReminderScheduleCard(schedule) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.darkSurface.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.accentIndigo.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentIndigo.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  schedule.formattedDate,
-                  style: TextStyle(
-                    color: AppTheme.accentIndigo,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${schedule.reminders.length} reminder${schedule.reminders.length != 1 ? 's' : ''}',
-                style: TextStyle(
-                  color: AppTheme.mutedText,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...schedule.reminders.map<Widget>((reminder) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.access_time_rounded,
-                    color: AppTheme.mutedText,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    reminder.getFormattedTime(),
-                    style: TextStyle(
-                      color: AppTheme.lightText,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      reminder.title,
-                      style: TextStyle(
-                        color: AppTheme.mutedText,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
+  void _updateGoalProgress(String goalId, double progress) async {
+    try {
+      await _goalService.updateProgress(goalId, progress);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating progress: $e')),
+        );
+      }
+    }
   }
 } 

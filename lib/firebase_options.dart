@@ -44,12 +44,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'demo-web-api-key',
-    appId: '1:123456789:web:demo-app-id',
-    messagingSenderId: '123456789',
-    projectId: 'demo-project',
-    authDomain: 'demo-project.firebaseapp.com',
-    storageBucket: 'demo-project.appspot.com',
+    apiKey: 'AIzaSyAUHQeCV3OqqK7ravc96bFS8CQfZc8OOus',
+    appId: '1:1000952327565:web:back_me_app',
+    messagingSenderId: '1000952327565',
+    projectId: 'back-me-3a5e5',
+    authDomain: 'back-me-3a5e5.firebaseapp.com',
+    storageBucket: 'back-me-3a5e5.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -61,20 +61,20 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'demo-ios-api-key',
-    appId: '1:123456789:ios:demo-app-id',
-    messagingSenderId: '123456789',
-    projectId: 'demo-project',
-    storageBucket: 'demo-project.appspot.com',
-    iosBundleId: 'com.example.backMeApp',
+    apiKey: 'AIzaSyA3419IeG9xpKQB_Y_XPjhR_stkovt2T3M',
+    appId: '1:1000952327565:ios:148ee540a916da68c9e1c4',
+    messagingSenderId: '1000952327565',
+    projectId: 'back-me-3a5e5',
+    storageBucket: 'back-me-3a5e5.firebasestorage.app',
+    iosBundleId: 'com.backme.backme',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'demo-macos-api-key',
-    appId: '1:123456789:macos:demo-app-id',
-    messagingSenderId: '123456789',
-    projectId: 'demo-project',
-    storageBucket: 'demo-project.appspot.com',
-    iosBundleId: 'com.example.backMeApp',
+    apiKey: 'AIzaSyA3419IeG9xpKQB_Y_XPjhR_stkovt2T3M',
+    appId: '1:1000952327565:macos:back_me_app',
+    messagingSenderId: '1000952327565',
+    projectId: 'back-me-3a5e5',
+    storageBucket: 'back-me-3a5e5.firebasestorage.app',
+    iosBundleId: 'com.backme.backme',
   );
 } 

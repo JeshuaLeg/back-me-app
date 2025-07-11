@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models/goal.dart';
-import '../models/goal_service.dart';
+import '../models/firebase_goal.dart';
+import '../services/firebase_goal_service.dart';
+import '../widgets/completion_dialog.dart';
+import '../utils/date_formatter.dart';
 
 class GoalDetailScreen extends StatefulWidget {
-  final Goal goal;
+  final FirebaseGoal goal;
 
   const GoalDetailScreen({super.key, required this.goal});
 
@@ -12,13 +14,14 @@ class GoalDetailScreen extends StatefulWidget {
 }
 
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
-  final GoalService _goalService = GoalService();
-  late Goal _goal;
+  final FirebaseGoalService _goalService = FirebaseGoalService();
+  late FirebaseGoal _goal;
 
   @override
   void initState() {
     super.initState();
     _goal = widget.goal;
+    _goalService.initialize();
   }
 
   @override
@@ -33,36 +36,55 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           ),
           PopupMenuButton(
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'complete',
-                child: const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('Mark Complete'),
-                  ],
+              // Complete option (only for active goals)
+              if (_goal.status == GoalStatus.active)
+                PopupMenuItem(
+                  value: 'complete',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Mark Complete'),
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'fail',
-                child: const Row(
-                  children: [
-                    Icon(Icons.cancel, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Mark Failed'),
-                  ],
+              
+              // Pause/Resume option based on current status
+              if (_goal.status == GoalStatus.active)
+                PopupMenuItem(
+                  value: 'pause',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.pause_circle, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('Pause Goal'),
+                    ],
+                  ),
+                )
+              else if (_goal.status == GoalStatus.paused)
+                PopupMenuItem(
+                  value: 'resume',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.play_circle, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Resume Goal'),
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'delete',
-                child: const Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete Goal'),
-                  ],
+              
+              // Delete option (always available except for completed goals)
+              if (_goal.status != GoalStatus.completed)
+                PopupMenuItem(
+                  value: 'delete',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete Goal'),
+                    ],
+                  ),
                 ),
-              ),
             ],
             onSelected: (value) => _handleMenuAction(value),
           ),
@@ -76,8 +98,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           _buildProgressSection(),
           const SizedBox(height: 24),
           _buildDetailsSection(),
-          const SizedBox(height: 24),
-          _buildAccountabilitySection(),
           const SizedBox(height: 24),
           _buildMilestonesSection(),
         ],
@@ -97,12 +117,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _goal.statusColor.withOpacity(0.1),
+                    color: _goal.categoryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     _goal.categoryIcon,
-                    color: _goal.statusColor,
+                    color: _goal.categoryColor,
                     size: 24,
                   ),
                 ),
@@ -118,9 +138,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                         ),
                       ),
                       Text(
-                        _goal.categoryDisplayName,
+                        _goal.category.name.toUpperCase(),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: _goal.statusColor,
+                          color: _goal.categoryColor,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -131,7 +151,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -183,35 +203,154 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${(_goal.progress * 100).toStringAsFixed(0)}% Complete',
+                  '${(_goal.progressPercentage * 100).toStringAsFixed(0)}% Complete',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  '${_goal.daysRemaining} days left',
+                  _goal.endDate != null 
+                    ? '${_goal.daysRemaining} days left'
+                    : 'No deadline set',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: _goal.isOverdue ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: _goal.isOverdue ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: _goal.progress,
-              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-              valueColor: AlwaysStoppedAnimation<Color>(_goal.statusColor),
+              value: _goal.progressPercentage,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(_goal.categoryColor),
+            ),
+            
+            // Auto-completion indicator
+            if (_goal.shouldAutoComplete)
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.celebration, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Goal completed! Ready to mark as complete with optional photo and note.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _markComplete(),
+                      child: const Text('Complete'),
+                    ),
+                  ],
+                ),
+              ),
+            
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildProgressStatCard(
+                    'Current',
+                    '${_goal.currentProgress.toStringAsFixed(1)} ${_goal.unit}',
+                    Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildProgressStatCard(
+                    'Target',
+                    '${_goal.targetValue.toStringAsFixed(1)} ${_goal.unit}',
+                    Colors.green,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
-            Slider(
-              value: _goal.progress,
-              onChanged: (value) => _updateProgress(value),
-              activeColor: _goal.statusColor,
-              divisions: 10,
-              label: '${(_goal.progress * 100).round()}%',
+            
+            // Paused goal indicator
+            if (_goal.status == GoalStatus.paused)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.pause_circle, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Goal is paused. Resume to continue tracking progress.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _goal.status == GoalStatus.active 
+                        ? () => _showProgressUpdateDialog()
+                        : null,
+                    icon: const Icon(Icons.add),
+                    label: Text(
+                      _goal.status == GoalStatus.paused 
+                          ? 'Resume to Update Progress'
+                          : 'Update Progress'
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProgressStatCard(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -230,38 +369,35 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow(Icons.calendar_today, 'Created', _formatDate(_goal.createdAt)),
-            _buildDetailRow(Icons.event, 'Deadline', _formatDate(_goal.deadline)),
-            _buildDetailRow(Icons.notifications, 'Reminders', '${_goal.reminderTimes.length} set'),
-            if (_goal.notes != null)
-              _buildDetailRow(Icons.note, 'Notes', _goal.notes!),
+            _buildDetailRow('Status', _goal.status.name.toUpperCase()),
+            _buildDetailRow('Category', _goal.category.name.toUpperCase()),
+            _buildDetailRow('Created', _formatDate(_goal.createdAt)),
+            if (_goal.endDate != null)
+              _buildDetailRow('Deadline', _formatDate(_goal.endDate!)),
+            if (_goal.stakeAmount > 0)
+              _buildDetailRow('Stakes', '\$${_goal.stakeAmount.toStringAsFixed(0)}'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-          const SizedBox(width: 12),
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.right,
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -269,73 +405,109 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  Widget _buildAccountabilitySection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Accountability Partners',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_goal.accountabilityPartners.isEmpty)
-              const Text('No accountability partners added yet.')
-            else
-              ..._goal.accountabilityPartners.map((partner) => ListTile(
-                leading: CircleAvatar(
-                  child: Text(partner.name[0].toUpperCase()),
-                ),
-                title: Text(partner.name),
-                subtitle: Text(partner.email),
-                trailing: Icon(
-                  partner.canSendReminders ? Icons.notifications_active : Icons.notifications_off,
-                  color: partner.canSendReminders ? Colors.green : Colors.grey,
-                ),
-              )),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildMilestonesSection() {
-    if (_goal.milestones.isEmpty) return const SizedBox.shrink();
-    
+    if (_goal.milestones.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Milestones',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Milestones',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_goal.milestones.isNotEmpty)
+                  Text(
+                    '${_goal.completedMilestonesCount}/${_goal.milestones.length} completed',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             ...List.generate(_goal.milestones.length, (index) {
               final milestone = _goal.milestones[index];
-              final isCompleted = index < _goal.milestonesCompleted.length && _goal.milestonesCompleted[index];
-              
-              return ListTile(
-                leading: Icon(
-                  isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: isCompleted ? Colors.green : Colors.grey,
-                ),
-                title: Text(
-                  milestone,
-                  style: TextStyle(
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    color: isCompleted ? Colors.grey : null,
+              return Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: milestone.isCompleted 
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: milestone.isCompleted 
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.grey.withValues(alpha: 0.2),
                   ),
                 ),
-                onTap: () => _toggleMilestone(index),
+                child: Row(
+                  children: [
+                    Icon(
+                      milestone.isCompleted 
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: milestone.isCompleted 
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            milestone.title,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              decoration: milestone.isCompleted 
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: milestone.isCompleted 
+                                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)
+                                  : null,
+                            ),
+                          ),
+                          if (milestone.isCompleted && milestone.completedAt != null)
+                            Text(
+                              'Completed on ${_formatDate(milestone.completedAt!)}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.green,
+                              ),
+                            ),
+                          if (milestone.isCompleted && milestone.completionNote != null)
+                            Text(
+                              milestone.completionNote!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (!milestone.isCompleted && _goal.status == GoalStatus.active)
+                      TextButton(
+                        onPressed: () => _completeMilestone(milestone),
+                        child: const Text('Complete'),
+                      ),
+                    if (milestone.isCompleted && milestone.completionPhotoUrl != null)
+                      IconButton(
+                        onPressed: () => _showCompletionPhoto(milestone.completionPhotoUrl!),
+                        icon: const Icon(Icons.photo),
+                        tooltip: 'View completion photo',
+                      ),
+                  ],
+                ),
               );
             }),
           ],
@@ -344,73 +516,236 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  void _updateProgress(double progress) {
-    setState(() {
-      _goal = _goal.copyWith(progress: progress);
-      _goalService.updateProgress(_goal.id, progress);
-    });
-  }
-
-  void _toggleMilestone(int index) {
-    final completed = List<bool>.from(_goal.milestonesCompleted);
-    if (index >= completed.length) {
-      completed.addAll(List.filled(index - completed.length + 1, false));
-    }
-    completed[index] = !completed[index];
-    
-    setState(() {
-      _goal = _goal.copyWith(milestonesCompleted: completed);
-      _goalService.updateGoal(_goal);
-    });
-  }
-
-  void _handleMenuAction(String action) {
-    switch (action) {
-      case 'complete':
-        _goalService.markGoalCompleted(_goal.id);
-        Navigator.of(context).pop();
-        break;
-      case 'fail':
-        _goalService.markGoalFailed(_goal.id);
-        Navigator.of(context).pop();
-        break;
-      case 'delete':
-        _showDeleteConfirmation();
-        break;
-    }
+  String _formatDate(DateTime date) {
+    return DateFormatter.formatDate(date);
   }
 
   void _showEditDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit goal feature coming soon!')),
-    );
-  }
-
-  void _showDeleteConfirmation() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Goal'),
-        content: const Text('Are you sure you want to delete this goal? This action cannot be undone.'),
+        title: const Text('Edit Goal'),
+        content: const Text('Edit functionality coming soon!'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              _goalService.deleteGoal(_goal.id);
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Close goal detail screen
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  void _showProgressUpdateDialog() {
+    final TextEditingController controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Progress'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Current: ${_goal.currentProgress.toStringAsFixed(1)} ${_goal.unit}'),
+            Text('Target: ${_goal.targetValue.toStringAsFixed(1)} ${_goal.unit}'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'New Progress (${_goal.unit})',
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => _updateProgress(controller.text),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateProgress(String value) async {
+    final progress = double.tryParse(value);
+    if (progress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid progress value')),
+      );
+      return;
+    }
+
+    try {
+      await _goalService.updateGoal(_goal.id, currentProgress: progress);
+      setState(() {
+        _goal = _goal.copyWith(currentProgress: progress);
+      });
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Progress updated successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating progress: $e')),
+      );
+    }
+  }
+
+  void _handleMenuAction(String action) async {
+    switch (action) {
+      case 'complete':
+        await _markComplete();
+        break;
+      case 'pause':
+        await _pauseGoal();
+        break;
+      case 'resume':
+        await _resumeGoal();
+        break;
+      case 'delete':
+        await _deleteGoal();
+        break;
+    }
+  }
+
+  Future<void> _markComplete() async {
+    // Use the completion dialog instead of simple completion
+    showCompletionDialog(
+      context,
+      goalId: _goal.id,
+      title: _goal.title,
+      onCompleted: () async {
+        // Refresh the goal data
+        final updatedGoal = await _goalService.getGoal(_goal.id);
+        if (updatedGoal != null) {
+          setState(() {
+            _goal = updatedGoal;
+          });
+        }
+      },
+    );
+  }
+
+  Future<void> _completeMilestone(Milestone milestone) async {
+    showCompletionDialog(
+      context,
+      goalId: _goal.id,
+      milestoneId: milestone.id,
+      title: milestone.title,
+      onCompleted: () async {
+        // Refresh the goal data
+        final updatedGoal = await _goalService.getGoal(_goal.id);
+        if (updatedGoal != null) {
+          setState(() {
+            _goal = updatedGoal;
+          });
+        }
+      },
+    );
+  }
+
+  void _showCompletionPhoto(String photoUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: const Text('Completion Photo'),
+              automaticallyImplyLeading: false,
+              actions: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            Expanded(
+              child: Image.network(
+                photoUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Text('Failed to load photo'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pauseGoal() async {
+    try {
+      await _goalService.updateGoal(_goal.id, status: GoalStatus.paused);
+      setState(() {
+        _goal = _goal.copyWith(status: GoalStatus.paused);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Goal paused')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error pausing goal: $e')),
+      );
+    }
+  }
+
+  Future<void> _resumeGoal() async {
+    try {
+      await _goalService.updateGoal(_goal.id, status: GoalStatus.active);
+      setState(() {
+        _goal = _goal.copyWith(status: GoalStatus.active);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Goal resumed')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error resuming goal: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteGoal() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Goal'),
+        content: const Text('Are you sure you want to delete this goal? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _goalService.deleteGoal(_goal.id);
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Goal deleted')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting goal: $e')),
+        );
+      }
+    }
   }
 } 

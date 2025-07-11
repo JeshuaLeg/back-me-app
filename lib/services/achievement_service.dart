@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/achievement.dart';
-import '../models/goal.dart';
+import '../models/firebase_goal.dart';
 import '../main.dart';
 
 class AchievementService extends ChangeNotifier {
@@ -394,7 +394,7 @@ class AchievementService extends ChangeNotifier {
     return false;
   }
 
-  void initializeWithGoalData(List<Goal> goals) {
+  void initializeWithGoalData(List<FirebaseGoal> goals) {
     final completedGoals = goals.where((g) => g.status == GoalStatus.completed).length;
     final totalStakes = goals.where((g) => g.status == GoalStatus.active)
         .fold(0.0, (sum, goal) => sum + goal.stakeAmount);

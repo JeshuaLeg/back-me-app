@@ -38,10 +38,29 @@ dependencies:
   # Firebase dependencies
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.3
+  firebase_storage: ^12.3.4
   google_sign_in: ^6.2.1
   
-  # Additional UI and state management
+  # SMS and deep linking
+  url_launcher: ^6.3.1
+  firebase_dynamic_links: ^6.0.8
+  
+  # Contacts and permissions
+  # contacts_service: ^0.6.3  # Temporarily disabled for Android build
+  permission_handler: ^11.3.1
+  
+  # Photo picker and utilities
+  image_picker: ^1.1.2
+  
+  # Content moderation
+  googleapis: ^13.2.0
+  http: ^1.2.2
+  
+  # Additional utilities
   shared_preferences: ^2.3.2
+  uuid: ^4.5.1
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

@@ -1,61 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/home_screen.dart';
-import 'screens/welcome_screen.dart';
-import 'services/auth_service.dart';
+import 'screens/auth_screen.dart';
+import 'services/firebase_goal_service.dart';
+import 'services/firebase_partner_service.dart';
+import 'services/deep_link_service.dart';
+import 'services/achievement_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const BackMeApp());
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
+  // Initialize services
+  await _initializeServices();
+  
+  runApp(const MyApp());
 }
 
-class BackMeApp extends StatelessWidget {
-  const BackMeApp({super.key});
+Future<void> _initializeServices() async {
+  // Initialize Achievement Service (existing)
+  final achievementService = AchievementService();
+  // Note: We'll initialize with goal data later when goals are loaded
+  
+  // Initialize Deep Link Service
+  final deepLinkService = DeepLinkService();
+  await deepLinkService.initialize();
+  
+  // Listen for auth state changes to initialize other services
+  FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+    if (user != null) {
+      // User is signed in, initialize user-specific services
+      final goalService = FirebaseGoalService();
+      final partnerService = FirebasePartnerService();
+      
+      await Future.wait([
+        goalService.initialize(),
+        partnerService.initialize(),
+      ]);
+      
+      // Check for pending invites after authentication
+      await deepLinkService.checkPendingInvite();
+      
+      // Create or update user profile
+      await partnerService.createOrUpdateUserProfile(
+        email: user.email ?? '',
+        displayName: user.displayName ?? 'User',
+        phoneNumber: user.phoneNumber,
+        photoUrl: user.photoURL,
+      );
+    } else {
+      // User is signed out, dispose services if needed
+      final goalService = FirebaseGoalService();
+      final partnerService = FirebasePartnerService();
+      
+      goalService.dispose();
+      partnerService.dispose();
+    }
+  });
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Back Me - Accountability Partner',
+      title: 'BackMe',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark, // Changed from system to dark
-      home: const AuthWrapper(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: AuthService().authStateChanges,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0F172A),
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentIndigo),
+      themeMode: ThemeMode.dark,
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: Color(0xFF0F172A),
+              body: Center(
+                child: CircularProgressIndicator(),
               ),
-            ),
-          );
-        }
-
-        if (snapshot.hasData) {
-          // User is signed in
-          return const HomeScreen();
-        } else {
-          // User is not signed in
-          return const WelcomeScreen();
-        }
-      },
+            );
+          }
+          
+          if (snapshot.hasData) {
+            // User is signed in
+            return const HomeScreen();
+          } else {
+            // User is not signed in, show auth screen
+            return const AuthScreen();
+          }
+        },
+      ),
     );
   }
 }
@@ -125,7 +162,7 @@ class AppTheme {
     ),
     cardTheme: CardThemeData(
       elevation: 8,
-      shadowColor: primarySlate.withOpacity(0.2),
+      shadowColor: primarySlate.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -137,7 +174,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
         elevation: 4,
-        shadowColor: primarySlate.withOpacity(0.3),
+        shadowColor: primarySlate.withValues(alpha: 0.3),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -150,7 +187,7 @@ class AppTheme {
     ),
     chipTheme: ChipThemeData(
       elevation: 2,
-      shadowColor: primarySlate.withOpacity(0.2),
+      shadowColor: primarySlate.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
@@ -218,7 +255,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       elevation: 6,
       color: darkCard,
-      shadowColor: Colors.black.withOpacity(0.3),
+      shadowColor: Colors.black.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -232,7 +269,7 @@ class AppTheme {
         elevation: 4,
         backgroundColor: accentIndigo,
         foregroundColor: lightText,
-        shadowColor: Colors.black.withOpacity(0.3),
+        shadowColor: Colors.black.withValues(alpha: 0.3),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -248,7 +285,7 @@ class AppTheme {
     chipTheme: ChipThemeData(
       elevation: 2,
       backgroundColor: darkCard,
-      shadowColor: Colors.black.withOpacity(0.2),
+      shadowColor: Colors.black.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),

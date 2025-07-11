@@ -37,6 +37,13 @@
             {
               "client_id": "1000952327565-nthdsrjr0nichshia36ivsb7clkk43v8.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1000952327565-meurqoou72a7od53sjv40n7irli71gvr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.backme.backme"
+              }
             }
           ]
         }
@@ -44,4 +51,4 @@
     }
   ],
   "configuration_version": "1"
-} 
+}

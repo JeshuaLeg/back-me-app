@@ -26,7 +26,7 @@ class PartnersScreen extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.3, 1.0],

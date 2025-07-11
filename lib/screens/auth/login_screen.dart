@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.5, 1.0],
@@ -193,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.accentIndigo.withOpacity(0.3),
+                            color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                             blurRadius: 15,
                             offset: const Offset(0, 8),
                           ),
@@ -307,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Expanded(
                         child: Container(
                           height: 1,
-                          color: AppTheme.mutedText.withOpacity(0.3),
+                          color: AppTheme.mutedText.withValues(alpha: 0.3),
                         ),
                       ),
                       Padding(
@@ -324,7 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Expanded(
                         child: Container(
                           height: 1,
-                          color: AppTheme.mutedText.withOpacity(0.3),
+                          color: AppTheme.mutedText.withValues(alpha: 0.3),
                         ),
                       ),
                     ],
@@ -426,18 +426,18 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppTheme.darkCard.withOpacity(0.3),
+            fillColor: AppTheme.darkCard.withValues(alpha: 0.3),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: AppTheme.mutedText.withOpacity(0.3),
+                color: AppTheme.mutedText.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: AppTheme.mutedText.withOpacity(0.3),
+                color: AppTheme.mutedText.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),

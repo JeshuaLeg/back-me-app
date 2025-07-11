@@ -101,7 +101,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.5, 1.0],
@@ -126,7 +126,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           borderRadius: BorderRadius.circular(28),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.accentIndigo.withOpacity(0.3),
+                              color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -269,7 +269,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             Expanded(
                               child: Container(
                                 height: 1,
-                                color: AppTheme.mutedText.withOpacity(0.3),
+                                color: AppTheme.mutedText.withValues(alpha: 0.3),
                               ),
                             ),
                             Padding(
@@ -286,7 +286,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             Expanded(
                               child: Container(
                                 height: 1,
-                                color: AppTheme.mutedText.withOpacity(0.3),
+                                color: AppTheme.mutedText.withValues(alpha: 0.3),
                               ),
                             ),
                           ],
@@ -343,7 +343,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.lightText,
                               side: BorderSide(
-                                color: AppTheme.accentIndigo.withOpacity(0.3),
+                                color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                                 width: 1.5,
                               ),
                               shape: RoundedRectangleBorder(
@@ -379,7 +379,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppTheme.accentIndigo.withOpacity(0.1),
+            color: AppTheme.accentIndigo.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(

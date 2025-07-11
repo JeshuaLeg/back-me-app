@@ -52,12 +52,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: AppTheme.accentIndigo.withOpacity(0.1),
+            color: AppTheme.accentIndigo.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected 
-              ? AppTheme.accentIndigo.withOpacity(0.2)
+              ? AppTheme.accentIndigo.withValues(alpha: 0.2)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
@@ -146,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildCurrentScreen() {
     switch (_selectedIndex) {
       case 0:
-        return const DashboardScreen();
+        return DashboardScreen(onTabSwitch: _onNavItemTapped);
       case 1:
         return const GoalsScreen();
       case 2:
@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 3:
         return const ProfileScreen();
       default:
-        return const DashboardScreen();
+        return DashboardScreen(onTabSwitch: _onNavItemTapped);
     }
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/goal.dart';
-import '../models/goal_service.dart';
+import '../models/firebase_goal.dart';
+import '../services/firebase_goal_service.dart';
 import '../widgets/goal_card.dart';
 import 'create_goal_screen.dart';
 import 'goal_detail_screen.dart';
@@ -14,13 +14,15 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin {
-  final GoalService _goalService = GoalService();
+  final FirebaseGoalService _goalService = FirebaseGoalService();
   late TabController _tabController;
+  bool _useDebugMode = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _goalService.initialize();
   }
 
   @override
@@ -48,6 +50,11 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
         ),
         actions: [
           IconButton(
+            onPressed: () => _toggleDebugMode(),
+            icon: Icon(_useDebugMode ? Icons.refresh : Icons.bug_report),
+            tooltip: _useDebugMode ? 'Refresh Goals' : 'Debug Mode',
+          ),
+          IconButton(
             onPressed: () => _navigateToCreateGoal(),
             icon: const Icon(Icons.add),
           ),
@@ -60,26 +67,110 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.3, 1.0],
           ),
         ),
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildGoalsList(_goalService.activeGoals),
-            _buildGoalsList(_goalService.completedGoals),
-            _buildGoalsList(_goalService.overdueGoals),
-            _buildGoalsList(_goalService.goals),
-          ],
-        ),
+        child: _useDebugMode ? _buildDebugView() : _buildStreamView(),
       ),
     );
   }
 
-  Widget _buildGoalsList(List<Goal> goals) {
+  Widget _buildStreamView() {
+    return StreamBuilder<List<FirebaseGoal>>(
+      stream: _goalService.goalsStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Stream Error: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _toggleDebugMode(),
+                  child: const Text('Try Debug Mode'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final allGoals = snapshot.data ?? [];
+
+        return TabBarView(
+          controller: _tabController,
+          children: [
+            _buildGoalsList(allGoals.where((goal) => goal.status == GoalStatus.active).toList()),
+            _buildGoalsList(allGoals.where((goal) => goal.status == GoalStatus.completed).toList()),
+            _buildGoalsList(allGoals.where((goal) => goal.isOverdue).toList()),
+            _buildGoalsList(allGoals),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDebugView() {
+    return FutureBuilder<List<FirebaseGoal>>(
+      future: _goalService.getGoalsSimple(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Debug Error: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => setState(() {}),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final allGoals = snapshot.data ?? [];
+
+        return Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.orange.withValues(alpha: 0.2),
+              child: Text(
+                'DEBUG MODE: Found ${allGoals.length} goals in database',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildGoalsList(allGoals.where((goal) => goal.status == GoalStatus.active).toList()),
+                  _buildGoalsList(allGoals.where((goal) => goal.status == GoalStatus.completed).toList()),
+                  _buildGoalsList(allGoals.where((goal) => goal.isOverdue).toList()),
+                  _buildGoalsList(allGoals),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGoalsList(List<FirebaseGoal> goals) {
     if (goals.isEmpty) {
       return _buildEmptyState();
     }
@@ -111,21 +202,21 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
             Icon(
               Icons.track_changes_outlined,
               size: 80,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(
               'No Goals Here',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Create a goal to get started with accountability!',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -153,7 +244,7 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
     });
   }
 
-  void _navigateToGoalDetail(Goal goal) {
+  void _navigateToGoalDetail(FirebaseGoal goal) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => GoalDetailScreen(goal: goal),
@@ -165,9 +256,21 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
     });
   }
 
-  void _updateGoalProgress(String goalId, double progress) {
+  void _updateGoalProgress(String goalId, double progress) async {
+    try {
+      await _goalService.updateProgress(goalId, progress);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating progress: $e')),
+        );
+      }
+    }
+  }
+
+  void _toggleDebugMode() {
     setState(() {
-      _goalService.updateProgress(goalId, progress);
+      _useDebugMode = !_useDebugMode;
     });
   }
 } 

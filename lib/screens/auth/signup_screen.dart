@@ -144,7 +144,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.5, 1.0],
@@ -408,18 +408,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppTheme.darkCard.withOpacity(0.3),
+            fillColor: AppTheme.darkCard.withValues(alpha: 0.3),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: AppTheme.mutedText.withOpacity(0.3),
+                color: AppTheme.mutedText.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: AppTheme.mutedText.withOpacity(0.3),
+                color: AppTheme.mutedText.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),

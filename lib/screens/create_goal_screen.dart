@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/goal.dart';
-import '../models/goal_service.dart';
+import 'package:uuid/uuid.dart';
+import '../models/firebase_goal.dart';
+import '../services/firebase_goal_service.dart';
+import '../utils/date_formatter.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   const CreateGoalScreen({super.key});
@@ -13,23 +15,31 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _stakeAmountController = TextEditingController();
-  final _notesController = TextEditingController();
+  final _targetController = TextEditingController();
+  final _unitController = TextEditingController();
+  final _stakeController = TextEditingController();
+  final _milestonesController = TextEditingController();
   
-  GoalCategory _selectedCategory = GoalCategory.personal;
-  DateTime _selectedDeadline = DateTime.now().add(const Duration(days: 30));
-  List<String> _milestones = [];
-  List<String> _reminderTimes = ['09:00'];
-  int _reminderFrequency = 1;
-  final _milestoneController = TextEditingController();
+  GoalCategory _selectedCategory = GoalCategory.health;
+  DateTime? _endDate;
+  bool _isLoading = false;
+  
+  final FirebaseGoalService _goalService = FirebaseGoalService();
+
+  @override
+  void initState() {
+    super.initState();
+    _goalService.initialize();
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _stakeAmountController.dispose();
-    _notesController.dispose();
-    _milestoneController.dispose();
+    _targetController.dispose();
+    _unitController.dispose();
+    _stakeController.dispose();
+    _milestonesController.dispose();
     super.dispose();
   }
 
@@ -38,34 +48,29 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create New Goal'),
-        actions: [
-          TextButton(
-            onPressed: _saveGoal,
-            child: const Text('Save'),
-          ),
-        ],
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          children: [
-            _buildBasicInfoSection(),
-            const SizedBox(height: 24),
-            _buildCategorySection(),
-            const SizedBox(height: 24),
-            _buildDeadlineSection(),
-            const SizedBox(height: 24),
-            _buildStakeSection(),
-            const SizedBox(height: 24),
-            _buildMilestonesSection(),
-            const SizedBox(height: 24),
-            _buildRemindersSection(),
-            const SizedBox(height: 24),
-            _buildNotesSection(),
-            const SizedBox(height: 32),
-            _buildCreateButton(),
-          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBasicInfoSection(),
+              const SizedBox(height: 32),
+              _buildCategorySection(),
+              const SizedBox(height: 32),
+              _buildTargetSection(),
+              const SizedBox(height: 32),
+              _buildDeadlineSection(),
+              const SizedBox(height: 32),
+              _buildStakeSection(),
+              const SizedBox(height: 32),
+              _buildMilestonesSection(),
+              const SizedBox(height: 32),
+              _buildCreateButton(),
+            ],
+          ),
         ),
       ),
     );
@@ -79,7 +84,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Goal Details',
+              'Basic Information',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -88,8 +93,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
-                labelText: 'Goal Title *',
-                hintText: 'e.g., Run 5K every day for 30 days',
+                labelText: 'Goal Title',
+                hintText: 'What do you want to achieve?',
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
@@ -103,8 +108,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(
-                labelText: 'Description *',
-                hintText: 'Describe your goal in detail...',
+                labelText: 'Description',
+                hintText: 'Describe your goal in detail',
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -136,8 +141,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
             ),
             const SizedBox(height: 16),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: GoalCategory.values.map((category) {
                 final isSelected = _selectedCategory == category;
                 return FilterChip(
@@ -146,12 +151,12 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        _getCategoryIcon(category),
-                        size: 16,
-                        color: isSelected ? Colors.white : null,
+                        category.icon,
+                        size: 18,
+                        color: isSelected ? Colors.white : category.color,
                       ),
-                      const SizedBox(width: 4),
-                      Text(_getCategoryDisplayName(category)),
+                      const SizedBox(width: 8),
+                      Text(category.displayName),
                     ],
                   ),
                   onSelected: (selected) {
@@ -159,8 +164,73 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       _selectedCategory = category;
                     });
                   },
+                  backgroundColor: category.color.withValues(alpha: 0.1),
+                  selectedColor: category.color,
                 );
               }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTargetSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Target',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: _targetController,
+                    decoration: const InputDecoration(
+                      labelText: 'Target Value',
+                      hintText: '10',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a target value';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 1,
+                  child: TextFormField(
+                    controller: _unitController,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit',
+                      hintText: 'lbs',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a unit';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -176,18 +246,51 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Deadline',
+              'Deadline (Optional)',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.event),
-              title: Text('Due Date'),
-              subtitle: Text('${_selectedDeadline.day}/${_selectedDeadline.month}/${_selectedDeadline.year}'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _selectDeadline,
+            InkWell(
+              onTap: _selectEndDate,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _endDate != null 
+                          ? DateFormatter.formatDate(_endDate!)
+                          : 'Select deadline',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: _endDate != null 
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                    if (_endDate != null)
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _endDate = null;
+                          });
+                        },
+                        icon: const Icon(Icons.clear),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -203,45 +306,36 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Financial Stake',
+              'Stakes (Optional)',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Put money on the line to increase accountability. If you don\'t reach your goal, this amount will be forfeited.',
+              'Add financial stakes to increase commitment',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _stakeAmountController,
+              controller: _stakeController,
               decoration: const InputDecoration(
-                labelText: 'Stake Amount (\$)',
-                hintText: '0',
+                labelText: 'Stake Amount',
+                hintText: '50',
+                prefixText: '\$',
                 border: OutlineInputBorder(),
-                prefixText: '\$ ',
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value != null && value.isNotEmpty) {
-                  final amount = double.tryParse(value);
-                  if (amount == null || amount < 0) {
+                  if (double.tryParse(value) == null) {
                     return 'Please enter a valid amount';
                   }
                 }
                 return null;
               },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tip: Research shows financial stakes increase goal completion rates by 60%',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontStyle: FontStyle.italic,
-              ),
             ),
           ],
         ),
@@ -257,132 +351,27 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Milestones',
+              'Milestones (Optional)',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Break your goal into smaller, achievable milestones.',
+              'Break down your goal into smaller milestones (one per line)',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child:                   TextFormField(
-                    controller: _milestoneController,
-                    decoration: const InputDecoration(
-                      labelText: 'Add Milestone',
-                      hintText: 'e.g., Complete first week',
-                      border: OutlineInputBorder(),
-                    ),
-                    onFieldSubmitted: (_) => _addMilestone(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _addMilestone,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_milestones.isNotEmpty) ...[
-              ...List.generate(_milestones.length, (index) {
-                return ListTile(
-                  leading: const Icon(Icons.flag_outlined),
-                  title: Text(_milestones[index]),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () => _removeMilestone(index),
-                  ),
-                );
-              }),
-            ] else
-              Text(
-                'No milestones added yet',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRemindersSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Reminders',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('Reminder Times'),
-              subtitle: Text(_reminderTimes.join(', ')),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _selectReminderTimes,
-            ),
-            ListTile(
-              leading: const Icon(Icons.repeat),
-              title: const Text('Frequency'),
-              subtitle: Text('Every $_reminderFrequency day${_reminderFrequency != 1 ? 's' : ''}'),
-              trailing: DropdownButton<int>(
-                value: _reminderFrequency,
-                items: List.generate(7, (index) => index + 1)
-                    .map((day) => DropdownMenuItem(
-                          value: day,
-                          child: Text('$day day${day != 1 ? 's' : ''}'),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _reminderFrequency = value ?? 1;
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Additional Notes',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _notesController,
+              controller: _milestonesController,
               decoration: const InputDecoration(
-                labelText: 'Notes (Optional)',
-                hintText: 'Any additional details, strategies, or motivation...',
+                labelText: 'Milestones',
+                hintText: 'Lose 5 lbs\nLose 10 lbs\nLose 15 lbs',
                 border: OutlineInputBorder(),
               ),
-              maxLines: 3,
+              maxLines: 5,
             ),
           ],
         ),
@@ -393,137 +382,102 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   Widget _buildCreateButton() {
     return SizedBox(
       width: double.infinity,
+      height: 56,
       child: ElevatedButton(
-        onPressed: _saveGoal,
+        onPressed: _isLoading ? null : _createGoal,
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        child: const Text(
-          'Create Goal',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
-  void _selectDeadline() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDeadline,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDeadline = picked;
-      });
-    }
-  }
-
-  void _selectReminderTimes() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reminder Times'),
-        content: const Text('Reminder time management feature coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+          backgroundColor: _selectedCategory.color,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+        ),
+        child: _isLoading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : const Text(
+              'Create Goal',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
       ),
     );
   }
 
-  void _addMilestone() {
-    if (_milestoneController.text.isNotEmpty) {
+  Future<void> _selectEndDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+    );
+    
+    if (date != null) {
       setState(() {
-        _milestones.add(_milestoneController.text);
-        _milestoneController.clear();
+        _endDate = date;
       });
     }
   }
 
-  void _removeMilestone(int index) {
+  Future<void> _createGoal() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
-      _milestones.removeAt(index);
+      _isLoading = true;
     });
-  }
 
-  void _saveGoal() {
-    if (_formKey.currentState!.validate()) {
-      final goal = Goal(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _titleController.text,
-        description: _descriptionController.text,
+    try {
+      // Parse milestones
+      List<String> milestones = [];
+      if (_milestonesController.text.isNotEmpty) {
+        milestones = _milestonesController.text
+            .split('\n')
+            .where((text) => text.trim().isNotEmpty)
+            .map((text) => text.trim())
+            .toList();
+      }
+
+      // Create goal using the service method signature
+      await _goalService.createGoal(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
         category: _selectedCategory,
-        createdAt: DateTime.now(),
-        deadline: _selectedDeadline,
-        stakeAmount: double.tryParse(_stakeAmountController.text) ?? 0.0,
-        reminderTimes: _reminderTimes,
-        reminderFrequency: _reminderFrequency,
-        milestones: _milestones,
-        milestonesCompleted: List.filled(_milestones.length, false),
-        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        startDate: DateTime.now(),
+        endDate: _endDate,
+        targetValue: double.parse(_targetController.text.trim()),
+        unit: _unitController.text.trim(),
+        stakeAmount: _stakeController.text.isNotEmpty 
+            ? double.parse(_stakeController.text.trim())
+            : 0.0,
+        milestones: milestones,
       );
 
-      GoalService().addGoal(goal);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Goal created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      Navigator.of(context).pop();
-    }
-  }
-
-  IconData _getCategoryIcon(GoalCategory category) {
-    switch (category) {
-      case GoalCategory.fitness:
-        return Icons.fitness_center;
-      case GoalCategory.health:
-        return Icons.health_and_safety;
-      case GoalCategory.career:
-        return Icons.work;
-      case GoalCategory.education:
-        return Icons.school;
-      case GoalCategory.finance:
-        return Icons.attach_money;
-      case GoalCategory.personal:
-        return Icons.person;
-      case GoalCategory.relationships:
-        return Icons.favorite;
-      case GoalCategory.habits:
-        return Icons.repeat;
-      case GoalCategory.other:
-        return Icons.category;
-    }
-  }
-
-  String _getCategoryDisplayName(GoalCategory category) {
-    switch (category) {
-      case GoalCategory.fitness:
-        return 'Fitness';
-      case GoalCategory.health:
-        return 'Health';
-      case GoalCategory.career:
-        return 'Career';
-      case GoalCategory.education:
-        return 'Education';
-      case GoalCategory.finance:
-        return 'Finance';
-      case GoalCategory.personal:
-        return 'Personal';
-      case GoalCategory.relationships:
-        return 'Relationships';
-      case GoalCategory.habits:
-        return 'Habits';
-      case GoalCategory.other:
-        return 'Other';
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Goal created successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating goal: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 } 

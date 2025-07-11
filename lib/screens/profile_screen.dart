@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../models/goal_service.dart';
+import '../services/firebase_goal_service.dart';
 import '../main.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -12,7 +12,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
-  final GoalService _goalService = GoalService();
+  final FirebaseGoalService _goalService = FirebaseGoalService();
+
+  @override
+  void initState() {
+    super.initState();
+    _goalService.initialize();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF0F172A),
-              AppTheme.primarySlate.withOpacity(0.05),
+              AppTheme.primarySlate.withValues(alpha: 0.05),
               const Color(0xFF0F172A),
             ],
             stops: const [0.0, 0.3, 1.0],
@@ -57,10 +63,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withOpacity(0.3),
+        color: AppTheme.darkCard.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.accentIndigo.withOpacity(0.1),
+          color: AppTheme.accentIndigo.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -73,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.accentIndigo.withOpacity(0.3),
+                  color: AppTheme.accentIndigo.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -110,10 +116,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppTheme.warningAmber.withOpacity(0.1),
+                color: AppTheme.warningAmber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppTheme.warningAmber.withOpacity(0.3),
+                  color: AppTheme.warningAmber.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -155,10 +161,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withOpacity(0.2),
+        color: AppTheme.darkCard.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.successGreen.withOpacity(0.1),
+          color: AppTheme.successGreen.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -174,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.successGreen.withOpacity(0.3),
+                      color: AppTheme.successGreen.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -248,10 +254,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -285,10 +291,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSettingsSection() {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withOpacity(0.2),
+        color: AppTheme.darkCard.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.mutedText.withOpacity(0.1),
+          color: AppTheme.mutedText.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -339,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.mutedText.withOpacity(0.1),
+                  color: AppTheme.mutedText.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -388,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       height: 1,
-      color: AppTheme.mutedText.withOpacity(0.1),
+      color: AppTheme.mutedText.withValues(alpha: 0.1),
     );
   }
 
@@ -400,7 +406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.errorRose.withOpacity(0.3),
+            color: AppTheme.errorRose.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
