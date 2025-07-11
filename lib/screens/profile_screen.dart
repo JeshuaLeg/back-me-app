@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_goal_service.dart';
 import '../main.dart';
+import 'achievements_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -290,49 +291,100 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildSettingsSection() {
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.darkCard.withValues(alpha: 0.2),
+        color: AppTheme.darkCard.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.mutedText.withValues(alpha: 0.1),
+          color: AppTheme.accentIndigo.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSettingsItem(
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.darkAccentGradient,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.accentIndigo.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.settings_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.lightText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          
+          // Achievements option
+          _buildSettingItem(
+            Icons.emoji_events_rounded,
+            'Achievements',
+            'View your unlocked achievements and progress',
+            AppTheme.warningAmber,
+            () => _navigateToAchievements(),
+          ),
+          const SizedBox(height: 16),
+          
+          // Existing settings options
+          _buildSettingItem(
             Icons.notifications_rounded,
             'Notifications',
-            'Manage your reminders and alerts',
-            onTap: () => _showNotificationSettings(),
+            'Manage your notification preferences',
+            AppTheme.accentIndigo,
+            () => _showNotificationSettings(),
           ),
-          _buildDivider(),
-          _buildSettingsItem(
+          const SizedBox(height: 16),
+          _buildSettingItem(
             Icons.privacy_tip_rounded,
             'Privacy',
-            'Manage your privacy settings',
-            onTap: () => _showPrivacySettings(),
+            'Control your data and privacy settings',
+            AppTheme.successGreen,
+            () => _showPrivacySettings(),
           ),
-          _buildDivider(),
-          _buildSettingsItem(
-            Icons.help_outline_rounded,
+          const SizedBox(height: 16),
+          _buildSettingItem(
+            Icons.help_rounded,
             'Help & Support',
             'Get help and contact support',
-            onTap: () => _showHelp(),
+            AppTheme.errorRose,
+            () => _showHelp(),
           ),
-          _buildDivider(),
-          _buildSettingsItem(
-            Icons.info_outline_rounded,
+          const SizedBox(height: 16),
+          _buildSettingItem(
+            Icons.info_rounded,
             'About',
             'App version and information',
-            onTap: () => _showAbout(),
+            AppTheme.mutedText,
+            () => _showAbout(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSettingsItem(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
+  Widget _buildSettingItem(IconData icon, String title, String subtitle, Color color, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -345,12 +397,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.mutedText.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
-                  color: AppTheme.mutedText,
+                  color: color,
                   size: 20,
                 ),
               ),
@@ -577,6 +629,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       SnackBar(
         content: const Text('About section coming soon!'),
         backgroundColor: AppTheme.accentIndigo,
+      ),
+    );
+  }
+
+  void _navigateToAchievements() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AchievementsScreen(),
       ),
     );
   }

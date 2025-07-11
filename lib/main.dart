@@ -3,10 +3,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'services/firebase_goal_service.dart';
 import 'services/firebase_partner_service.dart';
+import 'services/firebase_achievement_service.dart';
+import 'services/firebase_reminder_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/achievement_service.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,9 +25,8 @@ void main() async {
 }
 
 Future<void> _initializeServices() async {
-  // Initialize Achievement Service (existing)
+  // Initialize Achievement Service (will auto-initialize Firebase achievements)
   final achievementService = AchievementService();
-  // Note: We'll initialize with goal data later when goals are loaded
   
   // Initialize Deep Link Service
   final deepLinkService = DeepLinkService();
@@ -35,11 +38,15 @@ Future<void> _initializeServices() async {
       // User is signed in, initialize user-specific services
       final goalService = FirebaseGoalService();
       final partnerService = FirebasePartnerService();
+      final reminderService = FirebaseReminderService();
       
       await Future.wait([
         goalService.initialize(),
         partnerService.initialize(),
       ]);
+      
+      // Initialize notifications for reminders
+      await reminderService.initializeNotifications();
       
       // Check for pending invites after authentication
       await deepLinkService.checkPendingInvite();
@@ -51,6 +58,9 @@ Future<void> _initializeServices() async {
         phoneNumber: user.phoneNumber,
         photoUrl: user.photoURL,
       );
+      
+      // Sync achievement service with user data
+      await achievementService.syncWithFirebase();
     } else {
       // User is signed out, dispose services if needed
       final goalService = FirebaseGoalService();
@@ -83,7 +93,7 @@ class MyApp extends StatelessWidget {
               ),
             );
           }
-          
+
           if (snapshot.hasData) {
             // User is signed in
             return const HomeScreen();

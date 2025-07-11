@@ -104,4 +104,17 @@ class DateFormatter {
   static String formatDateRange(DateTime startDate, DateTime endDate) {
     return '${formatDate(startDate)} - ${formatDate(endDate)}';
   }
+
+  /// Check if two dates are the same day
+  static bool isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
+  }
+
+  /// Format day of week (e.g., "Monday", "Tuesday")
+  static String formatDayOfWeek(DateTime date) {
+    final format = DateFormat('EEEE');
+    return format.format(date);
+  }
 } 

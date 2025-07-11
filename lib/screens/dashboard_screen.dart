@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/firebase_goal.dart';
 import '../services/firebase_goal_service.dart';
-import '../models/reminder_service.dart';
+import '../services/firebase_reminder_service.dart';
 import '../widgets/goal_card.dart';
 import '../services/auth_service.dart';
 import '../services/achievement_service.dart';
@@ -23,7 +23,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   final FirebaseGoalService _goalService = FirebaseGoalService();
-  final ReminderService _reminderService = ReminderService();
+  final FirebaseReminderService _reminderService = FirebaseReminderService();
   final AuthService _authService = AuthService();
   final AchievementService _achievementService = AchievementService();
   late AnimationController _fabAnimation;
@@ -68,9 +68,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     
     // Initialize Firebase goal service
     _goalService.initialize();
-    
-    // Initialize reminder service with sample data
-    _reminderService.initializeWithSampleData();
     
     // Listen to goals stream to update achievement service
     _goalService.goalsStream.listen((goals) {
@@ -232,28 +229,24 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ],
                         ),
-                        // User avatar on the right
+                        // Achievements button on the right
                         GestureDetector(
-                          onTap: () {
-                            if (widget.onTabSwitch != null) {
-                              widget.onTabSwitch!(3); // Navigate to profile tab
-                            }
-                          },
+                          onTap: () => _navigateToAchievements(),
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              gradient: AppTheme.darkAccentGradient,
+                              gradient: AppTheme.warningGradient,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.accentIndigo.withValues(alpha: 0.3),
+                                  color: AppTheme.warningAmber.withValues(alpha: 0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: Icon(
-                              Icons.person_rounded,
+                              Icons.emoji_events_rounded,
                               color: Colors.white,
                               size: 24,
                             ),
@@ -657,48 +650,43 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.darkAccentGradient,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.accentIndigo.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: AppTheme.darkAccentGradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.accentIndigo.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                  child: const Icon(
-                    Icons.flash_on_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  'Quick Actions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.lightText,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ],
+                ],
+              ),
+              child: const Icon(
+                Icons.flash_on_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.lightText,
+                letterSpacing: -0.2,
+              ),
             ),
           ],
         ),
+        
         const SizedBox(height: 20),
         
-        // Action cards in grid layout
+        // First row of actions
         Row(
           children: [
             Expanded(
@@ -724,14 +712,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         const SizedBox(height: 16),
         
-        // Additional actions
+        // Second row of actions
         Row(
           children: [
             Expanded(
               child: _buildActionCard(
                 title: 'Set Reminders',
                 subtitle: 'Stay on track',
-                icon: Icons.notifications_active_rounded,
+                icon: Icons.notifications_rounded,
                 gradient: AppTheme.warningGradient,
                 onTap: () => _navigateToReminders(),
               ),
@@ -1017,7 +1005,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(44),
       decoration: BoxDecoration(
         color: AppTheme.darkCard.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(28),
@@ -1028,7 +1016,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
       child: Column(
         children: [
-          TweenAnimationBuilder<double>(
+            TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 800),
             tween: Tween(begin: 0.0, end: 1.0),
             curve: Curves.easeOutBack,

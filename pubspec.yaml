@@ -57,6 +57,10 @@ dependencies:
   googleapis: ^13.2.0
   http: ^1.2.2
   
+  # Notifications
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  
   # Additional utilities
   shared_preferences: ^2.3.2
   uuid: ^4.5.1

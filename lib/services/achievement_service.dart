@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import '../models/achievement.dart';
 import '../models/firebase_goal.dart';
+import '../models/firebase_partner.dart';
 import '../main.dart';
+import 'firebase_achievement_service.dart';
+import 'firebase_goal_service.dart';
+import 'firebase_partner_service.dart';
 
 class AchievementService extends ChangeNotifier {
   static final AchievementService _instance = AchievementService._internal();
   factory AchievementService() => _instance;
   AchievementService._internal() {
-    _initializeAchievements();
-    _initializeRewards();
+    _initializeFirebaseService();
   }
 
-  final List<Achievement> _achievements = [];
+  final FirebaseAchievementService _firebaseService = FirebaseAchievementService();
+  final FirebaseGoalService _goalService = FirebaseGoalService();
+  final FirebasePartnerService _partnerService = FirebasePartnerService();
+
+  List<Achievement> _achievements = [];
   final List<UserBadge> _userBadges = [];
   final List<Reward> _rewards = [];
   int _totalPoints = 0;
@@ -20,6 +27,7 @@ class AchievementService extends ChangeNotifier {
   int _longestStreak = 0;
   int _goalsCompleted = 0;
   int _totalGoalsCreated = 0;
+  bool _isInitialized = false;
 
   List<Achievement> get achievements => List.unmodifiable(_achievements);
   List<Achievement> get unlockedAchievements => 
@@ -41,10 +49,66 @@ class AchievementService extends ChangeNotifier {
   String get userTitle => _getUserTitle();
   Color get userTitleColor => _getUserTitleColor();
   UserLevel get currentUserLevel => _getCurrentUserLevel();
+  bool get isInitialized => _isInitialized;
 
-  void _initializeAchievements() {
-    _achievements.addAll([
-      // Goal Completion Achievements
+  // Initialize Firebase service and load achievements
+  Future<void> _initializeFirebaseService() async {
+    try {
+      // Initialize Firebase achievement service
+      await _firebaseService.initialize();
+      
+      // Seed achievements if this is the first time
+      await _firebaseService.seedDefaultAchievements();
+      
+      // Load achievements and user progress
+      await _loadAchievementsFromFirebase();
+      
+      // Initialize rewards (still local for now)
+      _initializeRewards();
+      
+      // Listen to achievement updates
+      _firebaseService.achievementsStream.listen((_) async {
+        await _loadAchievementsFromFirebase();
+      });
+      
+      _firebaseService.progressStream.listen((_) async {
+        await _loadAchievementsFromFirebase();
+      });
+      
+      _isInitialized = true;
+      notifyListeners();
+      print('Achievement service initialized successfully');
+    } catch (e) {
+      print('Error initializing achievement service: $e');
+      // Fallback to hardcoded achievements if Firebase fails
+      _initializeFallbackAchievements();
+      _initializeRewards();
+      _isInitialized = true;
+      notifyListeners();
+    }
+  }
+
+  // Load achievements from Firebase
+  Future<void> _loadAchievementsFromFirebase() async {
+    try {
+      _achievements = await _firebaseService.getUserAchievements();
+      _calculateTotalPoints();
+      _updateLevel();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading achievements from Firebase: $e');
+    }
+  }
+
+  // Calculate total points from unlocked achievements
+  void _calculateTotalPoints() {
+    _totalPoints = unlockedAchievements.fold(0, (sum, achievement) => sum + achievement.points);
+  }
+
+  // Fallback achievements if Firebase is unavailable
+  void _initializeFallbackAchievements() {
+    _achievements = [
+      // Basic fallback achievement
       Achievement(
         id: 'first_goal',
         title: 'First Steps',
@@ -59,124 +123,7 @@ class AchievementService extends ChangeNotifier {
         color: AppTheme.successGreen,
         specialReward: 'Beginner Badge',
       ),
-      Achievement(
-        id: 'goal_crusher',
-        title: 'Goal Crusher',
-        description: 'Complete 5 goals',
-        icon: Icons.emoji_events_rounded,
-        type: AchievementType.goalCompletion,
-        rarity: AchievementRarity.uncommon,
-        points: 200,
-        isUnlocked: _goalsCompleted >= 5,
-        progress: _goalsCompleted.toDouble(),
-        target: 5,
-        color: AppTheme.warningAmber,
-      ),
-      Achievement(
-        id: 'achievement_master',
-        title: 'Achievement Master',
-        description: 'Complete 10 goals',
-        icon: Icons.workspace_premium_rounded,
-        type: AchievementType.goalCompletion,
-        rarity: AchievementRarity.rare,
-        points: 500,
-        isUnlocked: _goalsCompleted >= 10,
-        progress: _goalsCompleted.toDouble(),
-        target: 10,
-        color: AppTheme.accentIndigo,
-        specialReward: 'Master Badge + Limited Edition Sticker',
-      ),
-      
-      // Streak Achievements
-      Achievement(
-        id: 'on_fire',
-        title: 'On Fire!',
-        description: 'Maintain a 7-day streak',
-        icon: Icons.local_fire_department_rounded,
-        type: AchievementType.streak,
-        rarity: AchievementRarity.common,
-        points: 100,
-        isUnlocked: _longestStreak >= 7,
-        progress: _longestStreak.toDouble(),
-        target: 7,
-        color: AppTheme.errorRose,
-      ),
-      Achievement(
-        id: 'unstoppable',
-        title: 'Unstoppable',
-        description: 'Maintain a 30-day streak',
-        icon: Icons.whatshot_rounded,
-        type: AchievementType.streak,
-        rarity: AchievementRarity.epic,
-        points: 750,
-        isUnlocked: _longestStreak >= 30,
-        progress: _longestStreak.toDouble(),
-        target: 30,
-        color: Colors.orange,
-        specialReward: 'Streak Champion T-Shirt',
-      ),
-      
-      // Consistency Achievements
-      Achievement(
-        id: 'consistent_performer',
-        title: 'Consistent Performer',
-        description: 'Complete goals 3 weeks in a row',
-        icon: Icons.trending_up_rounded,
-        type: AchievementType.consistency,
-        rarity: AchievementRarity.uncommon,
-        points: 300,
-        isUnlocked: false,
-        progress: 0,
-        target: 3,
-        color: AppTheme.accentIndigo,
-      ),
-      
-      // Financial Achievements
-      Achievement(
-        id: 'high_roller',
-        title: 'High Roller',
-        description: 'Have \$500+ in active stakes',
-        icon: Icons.attach_money_rounded,
-        type: AchievementType.financial,
-        rarity: AchievementRarity.rare,
-        points: 400,
-        isUnlocked: false,
-        progress: 0,
-        target: 500,
-        color: AppTheme.successGreen,
-      ),
-      
-      // Special Achievements
-      Achievement(
-        id: 'early_adopter',
-        title: 'Early Adopter',
-        description: 'One of the first 1000 users',
-        icon: Icons.star_rounded,
-        type: AchievementType.special,
-        rarity: AchievementRarity.legendary,
-        points: 1000,
-        isUnlocked: true,
-        progress: 1,
-        target: 1,
-        color: Colors.purple,
-        specialReward: 'Exclusive Early Adopter Hoodie',
-      ),
-      
-      // Social Achievements
-      Achievement(
-        id: 'team_player',
-        title: 'Team Player',
-        description: 'Add 3 accountability partners',
-        icon: Icons.people_rounded,
-        type: AchievementType.social,
-        rarity: AchievementRarity.uncommon,
-        points: 150,
-        isUnlocked: false,
-        progress: 0,
-        target: 3,
-        color: AppTheme.primarySlate,
-      ),
-    ]);
+    ];
   }
 
   void _initializeRewards() {
@@ -266,30 +213,63 @@ class AchievementService extends ChangeNotifier {
     ]);
   }
 
-  void updateGoalStats(int completedGoals, int totalGoals, double totalStakes) {
+  // Update goal statistics and sync with Firebase
+  Future<void> updateGoalStats(int completedGoals, int totalGoals, double totalStakes) async {
     _goalsCompleted = completedGoals;
     _totalGoalsCreated = totalGoals;
     
-    // Update achievement progress
-    _updateAchievementProgress('first_goal', completedGoals.toDouble());
-    _updateAchievementProgress('goal_crusher', completedGoals.toDouble());
-    _updateAchievementProgress('achievement_master', completedGoals.toDouble());
-    _updateAchievementProgress('high_roller', totalStakes);
+    // Get partner count
+    final activePartners = _partnerService.activePartnerships.length;
+    
+    // Update Firebase achievements
+    try {
+      await _firebaseService.updateUserStats(
+        completedGoals: completedGoals,
+        totalGoals: totalGoals,
+        currentStreak: _currentStreak,
+        longestStreak: _longestStreak,
+        totalStakes: totalStakes,
+        activePartners: activePartners,
+      );
+    } catch (e) {
+      print('Error updating goal stats in Firebase: $e');
+      // Fallback to local updates
+      _updateLocalAchievementProgress('first_goal', completedGoals.toDouble());
+      _updateLocalAchievementProgress('goal_crusher', completedGoals.toDouble());
+      _updateLocalAchievementProgress('achievement_master', completedGoals.toDouble());
+      _updateLocalAchievementProgress('high_roller', totalStakes);
+    }
     
     notifyListeners();
   }
 
-  void updateStreak(int currentStreak, int longestStreak) {
+  // Update streak and sync with Firebase
+  Future<void> updateStreak(int currentStreak, int longestStreak) async {
     _currentStreak = currentStreak;
     _longestStreak = longestStreak;
     
-    _updateAchievementProgress('on_fire', longestStreak.toDouble());
-    _updateAchievementProgress('unstoppable', longestStreak.toDouble());
+    // Update Firebase achievements
+    try {
+      await _firebaseService.updateUserStats(
+        completedGoals: _goalsCompleted,
+        totalGoals: _totalGoalsCreated,
+        currentStreak: currentStreak,
+        longestStreak: longestStreak,
+        totalStakes: _goalService.totalStakesAtRisk,
+        activePartners: _partnerService.activePartnerships.length,
+      );
+    } catch (e) {
+      print('Error updating streak in Firebase: $e');
+      // Fallback to local updates
+      _updateLocalAchievementProgress('on_fire', longestStreak.toDouble());
+      _updateLocalAchievementProgress('unstoppable', longestStreak.toDouble());
+    }
     
     notifyListeners();
   }
 
-  void _updateAchievementProgress(String achievementId, double progress) {
+  // Fallback method for local achievement updates
+  void _updateLocalAchievementProgress(String achievementId, double progress) {
     final index = _achievements.indexWhere((a) => a.id == achievementId);
     if (index != -1) {
       final achievement = _achievements[index];
@@ -394,16 +374,112 @@ class AchievementService extends ChangeNotifier {
     return false;
   }
 
-  void initializeWithGoalData(List<FirebaseGoal> goals) {
+  // Initialize with goal data and sync with Firebase
+  Future<void> initializeWithGoalData(List<FirebaseGoal> goals) async {
     final completedGoals = goals.where((g) => g.status == GoalStatus.completed).length;
     final totalStakes = goals.where((g) => g.status == GoalStatus.active)
         .fold(0.0, (sum, goal) => sum + goal.stakeAmount);
     
-    updateGoalStats(completedGoals, goals.length, totalStakes);
+    await updateGoalStats(completedGoals, goals.length, totalStakes);
     
-    // Award points for early adopter
-    if (!_achievements.firstWhere((a) => a.id == 'early_adopter').isUnlocked) {
-      _awardPoints(1000);
+    // Award early adopter achievement
+    try {
+      await _firebaseService.updateUserProgress(
+        achievementId: 'early_adopter',
+        progress: 1.0,
+        forceUnlock: true,
+      );
+    } catch (e) {
+      print('Error unlocking early adopter achievement: $e');
     }
+  }
+
+  // Refresh achievements from Firebase
+  Future<void> refreshAchievements() async {
+    if (_isInitialized) {
+      await _loadAchievementsFromFirebase();
+    }
+  }
+
+  // Force sync all data with Firebase
+  Future<void> syncWithFirebase() async {
+    try {
+      final goals = _goalService.goals;
+      final completedGoals = goals.where((g) => g.status == GoalStatus.completed).length;
+      final totalStakes = goals.where((g) => g.status == GoalStatus.active)
+          .fold(0.0, (sum, goal) => sum + goal.stakeAmount);
+      final activePartners = _partnerService.activePartnerships.length;
+      
+      await _firebaseService.updateUserStats(
+        completedGoals: completedGoals,
+        totalGoals: goals.length,
+        currentStreak: _currentStreak,
+        longestStreak: _longestStreak,
+        totalStakes: totalStakes,
+        activePartners: activePartners,
+      );
+      
+      await _loadAchievementsFromFirebase();
+    } catch (e) {
+      print('Error syncing with Firebase: $e');
+    }
+  }
+
+  // Admin functions (expose Firebase methods)
+  Future<void> seedAchievements() async {
+    await _firebaseService.seedDefaultAchievements();
+    await _loadAchievementsFromFirebase();
+  }
+
+  Future<void> createCustomAchievement({
+    required String id,
+    required String title,
+    required String description,
+    required String iconName,
+    required AchievementType type,
+    required AchievementRarity rarity,
+    required int points,
+    required int target,
+    required String colorName,
+    String? specialReward,
+  }) async {
+    await _firebaseService.createAchievement(
+      id: id,
+      title: title,
+      description: description,
+      iconName: iconName,
+      type: type,
+      rarity: rarity,
+      points: points,
+      target: target,
+      colorName: colorName,
+      specialReward: specialReward,
+    );
+    await _loadAchievementsFromFirebase();
+  }
+
+  // Get statistics including Firebase data
+  Future<Map<String, dynamic>> getStatistics() async {
+    try {
+      return await _firebaseService.getUserStatistics();
+    } catch (e) {
+      print('Error getting Firebase statistics: $e');
+      // Fallback to local statistics
+      final unlockedCount = unlockedAchievements.length;
+      return {
+        'totalAchievements': achievements.length,
+        'unlockedAchievements': unlockedCount,
+        'totalPoints': totalPoints,
+        'completionRate': achievements.isNotEmpty 
+            ? (unlockedCount / achievements.length * 100).round() 
+            : 0,
+      };
+    }
+  }
+
+  @override
+  void dispose() {
+    _firebaseService.dispose();
+    super.dispose();
   }
 } 
