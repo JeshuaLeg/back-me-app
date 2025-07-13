@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_goal_service.dart';
 import '../main.dart';
+import '../utils/smooth_transitions.dart';
 import 'achievements_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -634,10 +635,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _navigateToAchievements() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const AchievementsScreen(),
-      ),
-    );
+    context.pushSlideOnly(const AchievementsScreen());
   }
 } 

@@ -101,7 +101,7 @@ class DeepLinkService {
         minimumVersion: 1,
       ),
       iosParameters: const IOSParameters(
-        bundleId: 'com.example.backMeApp', // Replace with your bundle ID
+        bundleId: 'com.backme.backme', // Replace with your bundle ID
         minimumVersion: '1.0.0',
       ),
       socialMetaTagParameters: SocialMetaTagParameters(

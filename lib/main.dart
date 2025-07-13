@@ -11,6 +11,7 @@ import 'services/firebase_reminder_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/achievement_service.dart';
 import 'services/auth_service.dart';
+import 'utils/smooth_transitions.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,18 +90,22 @@ class MyApp extends StatelessWidget {
             return const Scaffold(
               backgroundColor: Color(0xFF0F172A),
               body: Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
               ),
             );
           }
 
-          if (snapshot.hasData) {
-            // User is signed in
-            return const HomeScreen();
-          } else {
-            // User is not signed in, show auth screen
-            return const AuthScreen();
-          }
+          // Use smooth animated switcher for auth/home transition
+          return SmoothTransitions.smoothSwitcher(
+            duration: const Duration(milliseconds: 400), // Slower fade in
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInQuad, // Faster fade out
+            child: snapshot.hasData 
+                ? const HomeScreen(key: ValueKey('home'))
+                : const AuthScreen(key: ValueKey('auth')),
+          );
         },
       ),
     );

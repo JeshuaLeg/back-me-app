@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
+import '../../utils/smooth_transitions.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -345,14 +346,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextSpan(text: "Don't have an account? "),
                           WidgetSpan(
                             child: GestureDetector(
-                              onTap: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SignUpScreen(),
-                                  ),
-                                );
-                              },
+                              onTap: _navigateToSignup,
                               child: Text(
                                 'Create Account',
                                 style: TextStyle(
@@ -470,5 +464,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ],
     );
+  }
+
+  void _navigateToSignup() {
+    context.pushSmooth(const SignUpScreen());
   }
 } 

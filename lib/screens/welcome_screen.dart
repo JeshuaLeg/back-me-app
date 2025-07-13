@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
+import '../utils/smooth_transitions.dart';
 import 'auth/login_screen.dart';
 import 'auth/signup_screen.dart';
 
@@ -88,6 +89,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _navigateToLogin() {
+    context.pushSmooth(const LoginScreen());
+  }
+
+  void _navigateToSignup() {
+    context.pushSmooth(const SignUpScreen());
   }
 
   @override
@@ -300,12 +309,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           height: 56,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignUpScreen(),
-                                ),
-                              );
+                              _navigateToSignup();
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.accentIndigo,
@@ -333,12 +337,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           height: 56,
                           child: OutlinedButton(
                             onPressed: _isLoading ? null : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
-                                ),
-                              );
+                              _navigateToLogin();
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.lightText,

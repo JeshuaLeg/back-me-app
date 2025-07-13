@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/firebase_goal.dart';
 import '../services/firebase_goal_service.dart';
 import '../widgets/goal_card.dart';
+import '../utils/smooth_transitions.dart';
 import 'create_goal_screen.dart';
 import 'goal_detail_screen.dart';
 import '../main.dart';
@@ -233,11 +234,7 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
   }
 
   void _navigateToCreateGoal() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const CreateGoalScreen(),
-      ),
-    ).then((_) {
+    context.pushSmooth(const CreateGoalScreen()).then((_) {
       setState(() {
         // Refresh when returning from create goal
       });
@@ -245,11 +242,7 @@ class _GoalsScreenState extends State<GoalsScreen> with TickerProviderStateMixin
   }
 
   void _navigateToGoalDetail(FirebaseGoal goal) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => GoalDetailScreen(goal: goal),
-      ),
-    ).then((_) {
+    context.pushSmooth(GoalDetailScreen(goal: goal)).then((_) {
       setState(() {
         // Refresh when returning from goal detail
       });

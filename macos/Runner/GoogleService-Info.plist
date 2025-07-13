@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.backMeApp</string>
+	<string>com.backme.backme</string>
 	<key>PROJECT_ID</key>
 	<string>back-me-3a5e5</string>
 	<key>STORAGE_BUCKET</key>

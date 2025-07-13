@@ -237,9 +237,58 @@ class _RemindersScreenState extends State<RemindersScreen> {
             tooltip: 'Test Notification',
           ),
           IconButton(
-            onPressed: _debugPendingNotifications,
             icon: const Icon(Icons.bug_report_rounded),
+            onPressed: _debugPendingNotifications,
             tooltip: 'Debug Notifications',
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.medical_services_rounded),
+            tooltip: 'System Diagnostic',
+            onSelected: (value) {
+              switch (value) {
+                case 'full_diagnostic':
+                  _runFullSystemDiagnostic();
+                  break;
+                case 'health_check':
+                  _runQuickHealthCheck();
+                  break;
+                case 'open_settings':
+                  _showSystemSettingsGuidance();
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'full_diagnostic',
+                child: Row(
+                  children: [
+                    Icon(Icons.health_and_safety_rounded, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Full System Diagnostic'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'health_check',
+                child: Row(
+                  children: [
+                    Icon(Icons.favorite_border_rounded, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Quick Health Check'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'open_settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_rounded, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Settings Guidance'),
+                  ],
+                ),
+              ),
+            ],
           ),
           IconButton(
             onPressed: () => _showAddReminderDialog(),
@@ -471,10 +520,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
 
   Widget _buildReminderCard(FirebaseReminder reminder) {
     final isToday = reminder.shouldTriggerToday();
-    final now = DateTime.now();
-    final todayMinutes = now.hour * 60 + now.minute;
-    final reminderMinutes = reminder.time.hour * 60 + reminder.time.minute;
-    final isOverdue = isToday && reminderMinutes < todayMinutes && reminder.isActive;
 
     return GestureDetector(
       onTap: () => _showEditReminderDialog(reminder),
@@ -484,13 +529,11 @@ class _RemindersScreenState extends State<RemindersScreen> {
           color: AppTheme.darkCard.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isOverdue 
-                ? AppTheme.errorRose.withValues(alpha: 0.3)
-                : isToday
-                    ? AppTheme.successGreen.withValues(alpha: 0.3)
-                    : reminder.isActive 
-                        ? AppTheme.accentIndigo.withValues(alpha: 0.2)
-                        : AppTheme.mutedText.withValues(alpha: 0.1),
+            color: isToday
+                ? AppTheme.successGreen.withValues(alpha: 0.3)
+                : reminder.isActive 
+                    ? AppTheme.accentIndigo.withValues(alpha: 0.2)
+                    : AppTheme.mutedText.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
@@ -502,28 +545,22 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isOverdue 
-                        ? AppTheme.errorRose.withValues(alpha: 0.2)
-                        : isToday
-                            ? AppTheme.successGreen.withValues(alpha: 0.2)
-                            : reminder.isActive 
-                                ? AppTheme.accentIndigo.withValues(alpha: 0.2)
-                                : AppTheme.mutedText.withValues(alpha: 0.1),
+                    color: isToday
+                        ? AppTheme.successGreen.withValues(alpha: 0.2)
+                        : reminder.isActive 
+                            ? AppTheme.accentIndigo.withValues(alpha: 0.2)
+                            : AppTheme.mutedText.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    isOverdue
-                        ? Icons.schedule_rounded
-                        : isToday
-                            ? Icons.today_rounded
-                            : Icons.access_time_rounded,
-                    color: isOverdue 
-                        ? AppTheme.errorRose
-                        : isToday
-                            ? AppTheme.successGreen
-                            : reminder.isActive 
-                                ? AppTheme.accentIndigo 
-                                : AppTheme.mutedText,
+                    isToday
+                        ? Icons.today_rounded
+                        : Icons.access_time_rounded,
+                    color: isToday
+                        ? AppTheme.successGreen
+                        : reminder.isActive 
+                            ? AppTheme.accentIndigo 
+                            : AppTheme.mutedText,
                     size: 18,
                   ),
                 ),
@@ -561,40 +598,32 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isOverdue 
-                            ? AppTheme.errorRose
-                            : isToday
-                                ? AppTheme.successGreen
-                                : reminder.isActive 
-                                    ? AppTheme.accentIndigo 
-                                    : AppTheme.mutedText,
+                        color: isToday
+                            ? AppTheme.successGreen
+                            : reminder.isActive 
+                                ? AppTheme.accentIndigo 
+                                : AppTheme.mutedText,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isOverdue 
-                            ? AppTheme.errorRose.withValues(alpha: 0.2)
-                            : isToday
-                                ? AppTheme.successGreen.withValues(alpha: 0.2)
-                                : AppTheme.mutedText.withValues(alpha: 0.1),
+                        color: isToday
+                            ? AppTheme.successGreen.withValues(alpha: 0.2)
+                            : AppTheme.mutedText.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isOverdue 
-                            ? 'Overdue'
-                            : isToday
-                                ? 'Today'
-                                : reminder.frequency.getDescription(),
+                        isToday
+                            ? 'Today'
+                            : reminder.frequency.getDescription(),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: isOverdue 
-                              ? AppTheme.errorRose
-                              : isToday
-                                  ? AppTheme.successGreen
-                                  : AppTheme.mutedText,
+                          color: isToday
+                              ? AppTheme.successGreen
+                              : AppTheme.mutedText,
                         ),
                       ),
                     ),
@@ -787,40 +816,92 @@ class _RemindersScreenState extends State<RemindersScreen> {
   }
 
   Future<void> _sendTestNotification() async {
-    try {
-      await _reminderService.sendTestNotification();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Test notification sent! Check your notifications.'),
-            backgroundColor: AppTheme.successGreen,
-            duration: const Duration(seconds: 3),
+    // Show dialog to select test delay
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          '🧪 Test Notification',
+          style: TextStyle(color: AppTheme.lightText, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Schedule a test notification in:',
+              style: TextStyle(color: AppTheme.mutedText),
+            ),
+            const SizedBox(height: 16),
+            ...[-1, 1, 2, 5].map((minutes) => ListTile(
+              title: Text(
+                minutes == -1 ? 'Immediately' : '$minutes minute${minutes == 1 ? '' : 's'}',
+                style: TextStyle(color: AppTheme.lightText),
+              ),
+              onTap: () => Navigator.of(context).pop(minutes),
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: TextStyle(color: AppTheme.mutedText)),
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending test notification: $e'),
-            backgroundColor: AppTheme.errorRose,
-          ),
-        );
+        ],
+      ),
+    );
+
+    if (result != null) {
+      try {
+        if (result == -1) {
+          // Send immediate notification
+          await _notificationService.showImmediateNotification(
+            title: '🧪 Test Notification',
+            body: 'This is an immediate test notification. If you received this, basic notifications are working!',
+            payload: 'test_immediate',
+          );
+        } else {
+          // Schedule test notification
+          await _notificationService.scheduleTestNotification(minutesFromNow: result);
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result == -1 
+                ? 'Immediate test notification sent!' 
+                : 'Test notification scheduled for $result minute${result == 1 ? '' : 's'} from now!'),
+              backgroundColor: AppTheme.successGreen,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error sending test notification: $e'),
+              backgroundColor: AppTheme.errorRose,
+            ),
+          );
+        }
       }
     }
   }
 
   Future<void> _debugPendingNotifications() async {
     try {
+      // Get debug information
+      final pendingNotifications = await _notificationService.getPendingNotifications();
+      final permissions = await _notificationService.getPermissionStatus();
+      final channelStatus = await _notificationService.getNotificationChannelStatus();
+      
+      // Also print to console for detailed debugging
       await _notificationService.debugPendingNotifications();
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Check console for pending notifications debug info.'),
-            backgroundColor: AppTheme.accentIndigo,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        _showNotificationDebugDialog(pendingNotifications, permissions, channelStatus);
       }
     } catch (e) {
       if (mounted) {
@@ -832,6 +913,148 @@ class _RemindersScreenState extends State<RemindersScreen> {
         );
       }
     }
+  }
+
+  void _showNotificationDebugDialog(
+    List<dynamic> pendingNotifications, 
+    Map<String, bool> permissions, 
+    Map<String, dynamic> channelStatus
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.bug_report_rounded, color: AppTheme.warningAmber, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              'Notification Debug',
+              style: TextStyle(color: AppTheme.lightText, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Current Time
+                _buildDebugSection(
+                  '📅 Current Status',
+                  [
+                    'Time: ${DateTime.now().toString().substring(0, 19)}',
+                    'Timezone: ${DateTime.now().timeZoneName}',
+                    'Offset: ${DateTime.now().timeZoneOffset}',
+                  ],
+                ),
+                
+                // Permissions
+                _buildDebugSection(
+                  '🔐 Permissions',
+                  [
+                    'Basic Notifications: ${(permissions['notifications'] ?? false) ? '✅ Granted' : '❌ Denied'}',
+                    'Exact Alarms: ${(permissions['exactAlarms'] ?? false) ? '✅ Granted' : '❌ Denied'}',
+                  ],
+                ),
+                
+                // Pending Notifications
+                _buildDebugSection(
+                  '📱 Pending Notifications (${pendingNotifications.length})',
+                  pendingNotifications.isEmpty 
+                    ? ['❌ No pending notifications found!', 
+                       'This might indicate:', 
+                       '• Notifications were not scheduled',
+                       '• Android cancelled them',
+                       '• Battery optimization interference']
+                    : pendingNotifications.map((n) => 
+                        '• ID: ${n.id}\n  ${n.title ?? 'No title'}\n  ${(n.body ?? 'No body').substring(0, 50)}...').toList(),
+                ),
+                
+                // Troubleshooting Guide
+                _buildDebugSection(
+                  '🛠️ Troubleshooting Tips',
+                  [
+                    '1. Check: Settings > Apps > Back Me App > Notifications',
+                    '2. Disable battery optimization for this app',
+                    '3. Make sure Do Not Disturb isn\'t blocking notifications',
+                    '4. Try restarting the app after changing permissions',
+                    '5. Use "Test Notification" to verify basic functionality',
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close', style: TextStyle(color: AppTheme.mutedText)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _sendTestNotification();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.warningAmber,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Test Notification'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebugSection(String title, List<String> items) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: AppTheme.accentIndigo,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primarySlate.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppTheme.mutedText.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  item,
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              )).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showEditReminderDialog(FirebaseReminder reminder) async {
@@ -994,6 +1217,332 @@ class _RemindersScreenState extends State<RemindersScreen> {
         ),
       );
     }
+  }
+
+  // Comprehensive system diagnostic methods
+  Future<void> _runFullSystemDiagnostic() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.darkCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Text(
+                'Running system diagnostic...',
+                style: TextStyle(color: AppTheme.lightText),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Run diagnostic
+      final diagnostic = await _notificationService.performSystemDiagnostic();
+      
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Show results dialog
+      if (mounted) {
+        _showDiagnosticResults(diagnostic);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Diagnostic failed: $e'),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _runQuickHealthCheck() async {
+    try {
+      final healthStatus = await _notificationService.getSystemHealthStatus();
+      
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.darkCard,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(
+                  healthStatus.startsWith('🟢') ? Icons.check_circle : 
+                  healthStatus.startsWith('🟡') ? Icons.warning : Icons.error,
+                  color: healthStatus.startsWith('🟢') ? AppTheme.successGreen :
+                         healthStatus.startsWith('🟡') ? AppTheme.warningAmber : AppTheme.errorRose,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Health Check',
+                  style: TextStyle(color: AppTheme.lightText),
+                ),
+              ],
+            ),
+            content: Text(
+              healthStatus,
+              style: TextStyle(color: AppTheme.mutedText),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('OK', style: TextStyle(color: AppTheme.accentIndigo)),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Health check failed: $e'),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSystemSettingsGuidance() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.settings, color: AppTheme.accentIndigo),
+            const SizedBox(width: 8),
+            Text(
+              'Settings Guidance',
+              style: TextStyle(color: AppTheme.lightText),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'To ensure reliable notifications, please check these settings:',
+                style: TextStyle(color: AppTheme.lightText, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildSettingsItem(
+                '🔋 Battery Optimization',
+                'Settings > Apps > Back Me App > Battery > Unrestricted',
+                'Set to "Unrestricted" or "Don\'t optimize"',
+              ),
+              _buildSettingsItem(
+                '🔔 Notifications',
+                'Settings > Apps > Back Me App > Notifications',
+                'Enable all notification permissions',
+              ),
+              _buildSettingsItem(
+                '⏰ Exact Alarms',
+                'Settings > Apps > Back Me App > Special app access > Alarms & reminders',
+                'Allow setting alarms and reminders',
+              ),
+              _buildSettingsItem(
+                '🚀 Auto-start',
+                'Settings > Battery > Auto-start management',
+                'Enable auto-start for this app (if available)',
+              ),
+              _buildSettingsItem(
+                '🌙 Do Not Disturb',
+                'Settings > Sounds > Do Not Disturb',
+                'Make sure app notifications aren\'t blocked',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Got it', style: TextStyle(color: AppTheme.accentIndigo)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsItem(String title, String path, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: AppTheme.lightText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            path,
+            style: TextStyle(
+              color: AppTheme.accentIndigo,
+              fontSize: 12,
+              fontFamily: 'monospace',
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            description,
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDiagnosticResults(Map<String, dynamic> diagnostic) {
+    final permissions = diagnostic['permissions'] as Map<String, dynamic>? ?? {};
+    final notifications = diagnostic['notifications'] as Map<String, dynamic>? ?? {};
+    final recommendations = diagnostic['recommendations'] as List<dynamic>? ?? [];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.health_and_safety, color: AppTheme.errorRose),
+            const SizedBox(width: 8),
+            Text(
+              'System Diagnostic',
+              style: TextStyle(color: AppTheme.lightText),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Permissions Status
+                _buildDiagnosticSection(
+                  '🔐 Permissions',
+                  permissions.entries.map((e) => 
+                    '${e.key}: ${e.value == true ? "✅ Granted" : "❌ Denied"}'
+                  ).toList(),
+                ),
+                
+                // Notification Status
+                _buildDiagnosticSection(
+                  '📱 Notifications',
+                  [
+                    'Pending: ${notifications['pending_count'] ?? 0}',
+                    if ((notifications['pending_count'] ?? 0) == 0)
+                      '⚠️ No pending notifications found!',
+                  ],
+                ),
+                
+                // Recommendations
+                if (recommendations.isNotEmpty) ...[
+                  Text(
+                    '💡 Recommendations',
+                    style: TextStyle(
+                      color: AppTheme.lightText,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...recommendations.take(5).map((rec) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• $rec',
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )),
+                  if (recommendations.length > 5)
+                    Text(
+                      '... and ${recommendations.length - 5} more',
+                      style: TextStyle(
+                        color: AppTheme.accentIndigo,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close', style: TextStyle(color: AppTheme.mutedText)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showSystemSettingsGuidance();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentIndigo,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Fix Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticSection(String title, List<String> items) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: AppTheme.lightText,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...items.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              item,
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 12,
+                fontFamily: item.contains('✅') || item.contains('❌') ? 'monospace' : null,
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
   }
 }
 

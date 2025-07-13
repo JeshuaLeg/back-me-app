@@ -51,5 +51,28 @@
 	<string>This app needs access to camera to take photos for goal completion proof</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs access to photo library to select photos for goal completion proof</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>This app needs notification permissions to send you reminders about your goals</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-fetch</string>
+		<string>remote-notification</string>
+		<string>background-processing</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.backme.backme.reminder</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.backme.backme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1000952327565-meurqoou72a7od53sjv40n7irli71gvr</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
